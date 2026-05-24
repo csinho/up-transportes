@@ -22,7 +22,9 @@ export interface DocumentoAnexo {
   id: UUID;
   tipo_documento: string;
   nome_arquivo: string;
-  arquivo_url: string; // object URL (mock) — futuro: Supabase Storage URL
+  arquivo_url: string;
+  /** Path no bucket Supabase `documentos` (privado). */
+  storage_path?: string;
   mime_type?: string;
   data_upload: ISODate;
   data_emissao?: ISODate;
@@ -125,9 +127,13 @@ export const TIPOS_VEICULO = [
   "Outro",
 ] as const;
 
+export type PapelVeiculo = "tracao" | "implemento";
+
 export interface Veiculo {
   id: UUID;
   transportadora_id: UUID;
+  /** Tração = cabine/cavalo (viagem principal). Implemento = reboque/carreta acoplado. */
+  papel_veiculo?: PapelVeiculo;
   tipo_veiculo: string;
   identificacao_interna?: string;
   marca?: string;
@@ -277,6 +283,11 @@ export interface Viagem {
   data_real_saida?: ISODate;
   data_prevista_chegada?: ISODate;
   data_real_chegada?: ISODate;
+  /** Auditoria de finalização (operador web ou motorista PWA). */
+  finalizacao_origem?: "motorista" | "operador";
+  finalizacao_em?: ISODate;
+  finalizacao_por_nome?: string;
+  finalizacao_motivo?: string;
   endereco_origem: Endereco;
   endereco_destino: Endereco;
   observacoes_operacionais?: string;
@@ -284,6 +295,127 @@ export interface Viagem {
   documentos: DocumentoAnexo[];
   created_at: ISODate;
   updated_at: ISODate;
+}
+
+// ── Operação da viagem: eventos, ocorrências, localização ───────────────────
+
+export type OrigemRegistroViagem = "sistema" | "motorista" | "operador";
+
+export type TipoViagemEvento =
+  | "viagem_criada"
+  | "status_alterado"
+  | "saida_origem"
+  | "chegada_destino"
+  | "parada"
+  | "retomada"
+  | "carregamento_inicio"
+  | "carregamento_fim"
+  | "descarga_inicio"
+  | "descarga_fim"
+  | "documento_anexado"
+  | "ocorrencia_registrada"
+  | "localizacao_enviada"
+  | "observacao"
+  | "viagem_finalizada";
+
+export const TIPOS_VIAGEM_EVENTO: { value: TipoViagemEvento; label: string }[] = [
+  { value: "viagem_criada", label: "Viagem criada" },
+  { value: "status_alterado", label: "Status alterado" },
+  { value: "saida_origem", label: "Saída da origem" },
+  { value: "chegada_destino", label: "Chegada ao destino" },
+  { value: "parada", label: "Parada" },
+  { value: "retomada", label: "Retomada" },
+  { value: "carregamento_inicio", label: "Início do carregamento" },
+  { value: "carregamento_fim", label: "Fim do carregamento" },
+  { value: "descarga_inicio", label: "Início da descarga" },
+  { value: "descarga_fim", label: "Fim da descarga" },
+  { value: "documento_anexado", label: "Documento anexado" },
+  { value: "ocorrencia_registrada", label: "Ocorrência registrada" },
+  { value: "localizacao_enviada", label: "Localização enviada" },
+  { value: "observacao", label: "Observação" },
+  { value: "viagem_finalizada", label: "Viagem finalizada" },
+];
+
+export interface ViagemEvento {
+  id: UUID;
+  transportadora_id: UUID;
+  viagem_id: UUID;
+  tipo: TipoViagemEvento;
+  titulo: string;
+  descricao?: string;
+  status_anterior?: StatusViagem;
+  status_novo?: StatusViagem;
+  origem: OrigemRegistroViagem;
+  motorista_id?: UUID;
+  created_at: ISODate;
+}
+
+export type TipoViagemOcorrencia =
+  | "mecanica"
+  | "acidente"
+  | "atraso"
+  | "documentacao"
+  | "carga"
+  | "climatica"
+  | "seguranca"
+  | "outro";
+
+export type GravidadeOcorrencia = "baixa" | "media" | "alta" | "critica";
+export type StatusOcorrencia = "aberta" | "em_tratamento" | "resolvida";
+
+export const TIPOS_VIAGEM_OCORRENCIA: { value: TipoViagemOcorrencia; label: string }[] = [
+  { value: "mecanica", label: "Mecânica" },
+  { value: "acidente", label: "Acidente" },
+  { value: "atraso", label: "Atraso" },
+  { value: "documentacao", label: "Documentação" },
+  { value: "carga", label: "Carga" },
+  { value: "climatica", label: "Climática" },
+  { value: "seguranca", label: "Segurança" },
+  { value: "outro", label: "Outro" },
+];
+
+export const GRAVIDADE_OCORRENCIA: { value: GravidadeOcorrencia; label: string }[] = [
+  { value: "baixa", label: "Baixa" },
+  { value: "media", label: "Média" },
+  { value: "alta", label: "Alta" },
+  { value: "critica", label: "Crítica" },
+];
+
+export const STATUS_OCORRENCIA: { value: StatusOcorrencia; label: string }[] = [
+  { value: "aberta", label: "Aberta" },
+  { value: "em_tratamento", label: "Em tratamento" },
+  { value: "resolvida", label: "Resolvida" },
+];
+
+export interface ViagemOcorrencia {
+  id: UUID;
+  transportadora_id: UUID;
+  viagem_id: UUID;
+  tipo: TipoViagemOcorrencia;
+  gravidade: GravidadeOcorrencia;
+  status: StatusOcorrencia;
+  titulo: string;
+  descricao: string;
+  latitude?: number;
+  longitude?: number;
+  motorista_id?: UUID;
+  created_at: ISODate;
+  updated_at: ISODate;
+  resolvida_em?: ISODate;
+}
+
+export interface ViagemLocalizacao {
+  id: UUID;
+  transportadora_id: UUID;
+  viagem_id: UUID;
+  motorista_id?: UUID;
+  latitude: number;
+  longitude: number;
+  velocidade_kmh?: number;
+  precisao_metros?: number;
+  heading?: number;
+  registrado_em: ISODate;
+  created_at: ISODate;
 }
 
 // ── Fase 2: Pneus + Financeiro ───────────────────────────────────────────────

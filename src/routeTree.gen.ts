@@ -12,14 +12,20 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ViagensRouteImport } from './routes/viagens'
 import { Route as VeiculosRouteImport } from './routes/veiculos'
 import { Route as TransportadoraRouteImport } from './routes/transportadora'
+import { Route as RastreamentoRouteImport } from './routes/rastreamento'
 import { Route as ProdutosRouteImport } from './routes/produtos'
-import { Route as PneusRouteImport } from './routes/pneus'
 import { Route as MotoristasRouteImport } from './routes/motoristas'
-import { Route as FornecedoresRouteImport } from './routes/fornecedores'
-import { Route as FinanceiroRouteImport } from './routes/financeiro'
+import { Route as MotoristaRouteImport } from './routes/motorista'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ViagensIndexRouteImport } from './routes/viagens.index'
+import { Route as MotoristaIndexRouteImport } from './routes/motorista.index'
 import { Route as ViagensIdRouteImport } from './routes/viagens.$id'
+import { Route as MotoristaViagensRouteImport } from './routes/motorista.viagens'
+import { Route as MotoristaDashboardRouteImport } from './routes/motorista.dashboard'
+import { Route as MotoristaViagensIndexRouteImport } from './routes/motorista.viagens.index'
+import { Route as MotoristaViagensIdRouteImport } from './routes/motorista.viagens.$id'
 
 const ViagensRoute = ViagensRouteImport.update({
   id: '/viagens',
@@ -36,14 +42,14 @@ const TransportadoraRoute = TransportadoraRouteImport.update({
   path: '/transportadora',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RastreamentoRoute = RastreamentoRouteImport.update({
+  id: '/rastreamento',
+  path: '/rastreamento',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProdutosRoute = ProdutosRouteImport.update({
   id: '/produtos',
   path: '/produtos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PneusRoute = PneusRouteImport.update({
-  id: '/pneus',
-  path: '/pneus',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MotoristasRoute = MotoristasRouteImport.update({
@@ -51,14 +57,14 @@ const MotoristasRoute = MotoristasRouteImport.update({
   path: '/motoristas',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FornecedoresRoute = FornecedoresRouteImport.update({
-  id: '/fornecedores',
-  path: '/fornecedores',
+const MotoristaRoute = MotoristaRouteImport.update({
+  id: '/motorista',
+  path: '/motorista',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FinanceiroRoute = FinanceiroRouteImport.update({
-  id: '/financeiro',
-  path: '/financeiro',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClientesRoute = ClientesRouteImport.update({
@@ -71,102 +77,162 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ViagensIndexRoute = ViagensIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ViagensRoute,
+} as any)
+const MotoristaIndexRoute = MotoristaIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MotoristaRoute,
+} as any)
 const ViagensIdRoute = ViagensIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => ViagensRoute,
 } as any)
+const MotoristaViagensRoute = MotoristaViagensRouteImport.update({
+  id: '/viagens',
+  path: '/viagens',
+  getParentRoute: () => MotoristaRoute,
+} as any)
+const MotoristaDashboardRoute = MotoristaDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => MotoristaRoute,
+} as any)
+const MotoristaViagensIndexRoute = MotoristaViagensIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MotoristaViagensRoute,
+} as any)
+const MotoristaViagensIdRoute = MotoristaViagensIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => MotoristaViagensRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/clientes': typeof ClientesRoute
-  '/financeiro': typeof FinanceiroRoute
-  '/fornecedores': typeof FornecedoresRoute
+  '/login': typeof LoginRoute
+  '/motorista': typeof MotoristaRouteWithChildren
   '/motoristas': typeof MotoristasRoute
-  '/pneus': typeof PneusRoute
   '/produtos': typeof ProdutosRoute
+  '/rastreamento': typeof RastreamentoRoute
   '/transportadora': typeof TransportadoraRoute
   '/veiculos': typeof VeiculosRoute
   '/viagens': typeof ViagensRouteWithChildren
+  '/motorista/dashboard': typeof MotoristaDashboardRoute
+  '/motorista/viagens': typeof MotoristaViagensRouteWithChildren
   '/viagens/$id': typeof ViagensIdRoute
+  '/motorista/': typeof MotoristaIndexRoute
+  '/viagens/': typeof ViagensIndexRoute
+  '/motorista/viagens/$id': typeof MotoristaViagensIdRoute
+  '/motorista/viagens/': typeof MotoristaViagensIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/clientes': typeof ClientesRoute
-  '/financeiro': typeof FinanceiroRoute
-  '/fornecedores': typeof FornecedoresRoute
+  '/login': typeof LoginRoute
   '/motoristas': typeof MotoristasRoute
-  '/pneus': typeof PneusRoute
   '/produtos': typeof ProdutosRoute
+  '/rastreamento': typeof RastreamentoRoute
   '/transportadora': typeof TransportadoraRoute
   '/veiculos': typeof VeiculosRoute
-  '/viagens': typeof ViagensRouteWithChildren
+  '/motorista/dashboard': typeof MotoristaDashboardRoute
   '/viagens/$id': typeof ViagensIdRoute
+  '/motorista': typeof MotoristaIndexRoute
+  '/viagens': typeof ViagensIndexRoute
+  '/motorista/viagens/$id': typeof MotoristaViagensIdRoute
+  '/motorista/viagens': typeof MotoristaViagensIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/clientes': typeof ClientesRoute
-  '/financeiro': typeof FinanceiroRoute
-  '/fornecedores': typeof FornecedoresRoute
+  '/login': typeof LoginRoute
+  '/motorista': typeof MotoristaRouteWithChildren
   '/motoristas': typeof MotoristasRoute
-  '/pneus': typeof PneusRoute
   '/produtos': typeof ProdutosRoute
+  '/rastreamento': typeof RastreamentoRoute
   '/transportadora': typeof TransportadoraRoute
   '/veiculos': typeof VeiculosRoute
   '/viagens': typeof ViagensRouteWithChildren
+  '/motorista/dashboard': typeof MotoristaDashboardRoute
+  '/motorista/viagens': typeof MotoristaViagensRouteWithChildren
   '/viagens/$id': typeof ViagensIdRoute
+  '/motorista/': typeof MotoristaIndexRoute
+  '/viagens/': typeof ViagensIndexRoute
+  '/motorista/viagens/$id': typeof MotoristaViagensIdRoute
+  '/motorista/viagens/': typeof MotoristaViagensIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/clientes'
-    | '/financeiro'
-    | '/fornecedores'
+    | '/login'
+    | '/motorista'
     | '/motoristas'
-    | '/pneus'
     | '/produtos'
+    | '/rastreamento'
     | '/transportadora'
     | '/veiculos'
     | '/viagens'
+    | '/motorista/dashboard'
+    | '/motorista/viagens'
     | '/viagens/$id'
+    | '/motorista/'
+    | '/viagens/'
+    | '/motorista/viagens/$id'
+    | '/motorista/viagens/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/clientes'
-    | '/financeiro'
-    | '/fornecedores'
+    | '/login'
     | '/motoristas'
-    | '/pneus'
     | '/produtos'
+    | '/rastreamento'
     | '/transportadora'
     | '/veiculos'
-    | '/viagens'
+    | '/motorista/dashboard'
     | '/viagens/$id'
+    | '/motorista'
+    | '/viagens'
+    | '/motorista/viagens/$id'
+    | '/motorista/viagens'
   id:
     | '__root__'
     | '/'
     | '/clientes'
-    | '/financeiro'
-    | '/fornecedores'
+    | '/login'
+    | '/motorista'
     | '/motoristas'
-    | '/pneus'
     | '/produtos'
+    | '/rastreamento'
     | '/transportadora'
     | '/veiculos'
     | '/viagens'
+    | '/motorista/dashboard'
+    | '/motorista/viagens'
     | '/viagens/$id'
+    | '/motorista/'
+    | '/viagens/'
+    | '/motorista/viagens/$id'
+    | '/motorista/viagens/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ClientesRoute: typeof ClientesRoute
-  FinanceiroRoute: typeof FinanceiroRoute
-  FornecedoresRoute: typeof FornecedoresRoute
+  LoginRoute: typeof LoginRoute
+  MotoristaRoute: typeof MotoristaRouteWithChildren
   MotoristasRoute: typeof MotoristasRoute
-  PneusRoute: typeof PneusRoute
   ProdutosRoute: typeof ProdutosRoute
+  RastreamentoRoute: typeof RastreamentoRoute
   TransportadoraRoute: typeof TransportadoraRoute
   VeiculosRoute: typeof VeiculosRoute
   ViagensRoute: typeof ViagensRouteWithChildren
@@ -195,18 +261,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TransportadoraRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/rastreamento': {
+      id: '/rastreamento'
+      path: '/rastreamento'
+      fullPath: '/rastreamento'
+      preLoaderRoute: typeof RastreamentoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/produtos': {
       id: '/produtos'
       path: '/produtos'
       fullPath: '/produtos'
       preLoaderRoute: typeof ProdutosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pneus': {
-      id: '/pneus'
-      path: '/pneus'
-      fullPath: '/pneus'
-      preLoaderRoute: typeof PneusRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/motoristas': {
@@ -216,18 +282,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MotoristasRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/fornecedores': {
-      id: '/fornecedores'
-      path: '/fornecedores'
-      fullPath: '/fornecedores'
-      preLoaderRoute: typeof FornecedoresRouteImport
+    '/motorista': {
+      id: '/motorista'
+      path: '/motorista'
+      fullPath: '/motorista'
+      preLoaderRoute: typeof MotoristaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/financeiro': {
-      id: '/financeiro'
-      path: '/financeiro'
-      fullPath: '/financeiro'
-      preLoaderRoute: typeof FinanceiroRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/clientes': {
@@ -244,6 +310,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/viagens/': {
+      id: '/viagens/'
+      path: '/'
+      fullPath: '/viagens/'
+      preLoaderRoute: typeof ViagensIndexRouteImport
+      parentRoute: typeof ViagensRoute
+    }
+    '/motorista/': {
+      id: '/motorista/'
+      path: '/'
+      fullPath: '/motorista/'
+      preLoaderRoute: typeof MotoristaIndexRouteImport
+      parentRoute: typeof MotoristaRoute
+    }
     '/viagens/$id': {
       id: '/viagens/$id'
       path: '/$id'
@@ -251,15 +331,74 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ViagensIdRouteImport
       parentRoute: typeof ViagensRoute
     }
+    '/motorista/viagens': {
+      id: '/motorista/viagens'
+      path: '/viagens'
+      fullPath: '/motorista/viagens'
+      preLoaderRoute: typeof MotoristaViagensRouteImport
+      parentRoute: typeof MotoristaRoute
+    }
+    '/motorista/dashboard': {
+      id: '/motorista/dashboard'
+      path: '/dashboard'
+      fullPath: '/motorista/dashboard'
+      preLoaderRoute: typeof MotoristaDashboardRouteImport
+      parentRoute: typeof MotoristaRoute
+    }
+    '/motorista/viagens/': {
+      id: '/motorista/viagens/'
+      path: '/'
+      fullPath: '/motorista/viagens/'
+      preLoaderRoute: typeof MotoristaViagensIndexRouteImport
+      parentRoute: typeof MotoristaViagensRoute
+    }
+    '/motorista/viagens/$id': {
+      id: '/motorista/viagens/$id'
+      path: '/$id'
+      fullPath: '/motorista/viagens/$id'
+      preLoaderRoute: typeof MotoristaViagensIdRouteImport
+      parentRoute: typeof MotoristaViagensRoute
+    }
   }
 }
 
+interface MotoristaViagensRouteChildren {
+  MotoristaViagensIdRoute: typeof MotoristaViagensIdRoute
+  MotoristaViagensIndexRoute: typeof MotoristaViagensIndexRoute
+}
+
+const MotoristaViagensRouteChildren: MotoristaViagensRouteChildren = {
+  MotoristaViagensIdRoute: MotoristaViagensIdRoute,
+  MotoristaViagensIndexRoute: MotoristaViagensIndexRoute,
+}
+
+const MotoristaViagensRouteWithChildren =
+  MotoristaViagensRoute._addFileChildren(MotoristaViagensRouteChildren)
+
+interface MotoristaRouteChildren {
+  MotoristaDashboardRoute: typeof MotoristaDashboardRoute
+  MotoristaViagensRoute: typeof MotoristaViagensRouteWithChildren
+  MotoristaIndexRoute: typeof MotoristaIndexRoute
+}
+
+const MotoristaRouteChildren: MotoristaRouteChildren = {
+  MotoristaDashboardRoute: MotoristaDashboardRoute,
+  MotoristaViagensRoute: MotoristaViagensRouteWithChildren,
+  MotoristaIndexRoute: MotoristaIndexRoute,
+}
+
+const MotoristaRouteWithChildren = MotoristaRoute._addFileChildren(
+  MotoristaRouteChildren,
+)
+
 interface ViagensRouteChildren {
   ViagensIdRoute: typeof ViagensIdRoute
+  ViagensIndexRoute: typeof ViagensIndexRoute
 }
 
 const ViagensRouteChildren: ViagensRouteChildren = {
   ViagensIdRoute: ViagensIdRoute,
+  ViagensIndexRoute: ViagensIndexRoute,
 }
 
 const ViagensRouteWithChildren =
@@ -268,11 +407,11 @@ const ViagensRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ClientesRoute: ClientesRoute,
-  FinanceiroRoute: FinanceiroRoute,
-  FornecedoresRoute: FornecedoresRoute,
+  LoginRoute: LoginRoute,
+  MotoristaRoute: MotoristaRouteWithChildren,
   MotoristasRoute: MotoristasRoute,
-  PneusRoute: PneusRoute,
   ProdutosRoute: ProdutosRoute,
+  RastreamentoRoute: RastreamentoRoute,
   TransportadoraRoute: TransportadoraRoute,
   VeiculosRoute: VeiculosRoute,
   ViagensRoute: ViagensRouteWithChildren,

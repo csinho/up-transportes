@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useClientes, useSaveCliente, useRemoveCliente, useActiveTenantId } from "@/data/store";
 import type { Cliente, TipoCliente } from "@/types";
+import { generateUuid } from "@/lib/uuid";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,12 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import { AddressForm } from "@/components/AddressForm";
 import { maskCNPJ, maskCPF, maskPhone } from "@/lib/masks";
 import { toast } from "sonner";
+import { useConfirm } from "@/hooks/use-confirm";
+import { useListControls } from "@/hooks/use-list-controls";
+import { ListToolbar } from "@/components/list/ListToolbar";
+import { ListFilterSelect } from "@/components/list/ListFilterSelect";
+import { ListPagination } from "@/components/list/ListPagination";
+import { FILTER_ALL, matchesAny } from "@/lib/list-utils";
 
 export const Route = createFileRoute("/clientes")({
   head: () => ({ meta: [{ title: "Clientes — ERP Transportadora" }] }),
@@ -24,7 +31,7 @@ export const Route = createFileRoute("/clientes")({
 function empty(tenantId: string): Cliente {
   const now = new Date().toISOString();
   return {
-    id: crypto.randomUUID(), transportadora_id: tenantId, tipo_cliente: "PJ", nome: "",
+    id: generateUuid(), transportadora_id: tenantId, tipo_cliente: "PJ", nome: "",
     endereco: { cep: "", logradouro: "", numero: "", bairro: "", cidade: "", uf: "", pais: "Brasil" },
     created_at: now, updated_at: now,
   };
@@ -35,8 +42,16 @@ function Page() {
   const { data: clientes = [] } = useClientes();
   const save = useSaveCliente();
   const remove = useRemoveCliente();
+  const { confirm, ConfirmDialogHost } = useConfirm();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<Cliente | null>(null);
+
+  const list = useListControls({
+    items: clientes,
+    searchFn: (c, q) => matchesAny([c.nome, c.tipo_cliente, c.cpf, c.cnpj, c.endereco.cidade, c.endereco.uf, c.telefone_principal], q),
+    filterFn: (c, f) => !f.tipo || f.tipo === FILTER_ALL || c.tipo_cliente === f.tipo,
+    initialFilters: { tipo: FILTER_ALL },
+  });
 
   const salvar = () => {
     if (!form) return;
@@ -48,23 +63,47 @@ function Page() {
 
   return (
     <div className="space-y-4">
+      <ConfirmDialogHost />
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Clientes</h1>
-          <p className="text-sm text-muted-foreground">{clientes.length} cadastrados</p>
+          <p className="text-sm text-muted-foreground">
+            Origem e destino das viagens · {clientes.length} cadastrados
+          </p>
         </div>
         <Button onClick={() => { setForm(empty(tenantId)); setOpen(true); }}><Plus className="h-4 w-4 mr-2" /> Novo cliente</Button>
       </div>
 
       <div className="rounded-lg border bg-card">
+        <div className="p-4 border-b">
+          <ListToolbar
+            search={list.search}
+            onSearchChange={list.setSearch}
+            placeholder="Buscar cliente, CPF/CNPJ, cidade…"
+            totalItems={list.totalItems}
+            page={list.page}
+            pageSize={list.pageSize}
+          >
+            <ListFilterSelect
+              label="Tipo"
+              value={list.filters.tipo ?? FILTER_ALL}
+              onChange={(v) => list.setFilter("tipo", v)}
+              options={[{ value: "PJ", label: "PJ" }, { value: "PF", label: "PF" }]}
+            />
+          </ListToolbar>
+        </div>
         <Table>
           <TableHeader><TableRow>
             <TableHead>Nome</TableHead><TableHead>Tipo</TableHead><TableHead>CPF/CNPJ</TableHead>
             <TableHead>Cidade/UF</TableHead><TableHead>Telefone</TableHead><TableHead className="w-[120px]"></TableHead>
           </TableRow></TableHeader>
           <TableBody>
-            {clientes.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum cliente cadastrado.</TableCell></TableRow>}
-            {clientes.map((c) => (
+            {list.totalItems === 0 && (
+              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                {list.hasActiveFilters ? "Nenhum cliente encontrado." : "Nenhum cliente cadastrado."}
+              </TableCell></TableRow>
+            )}
+            {list.paginated.map((c) => (
               <TableRow key={c.id}>
                 <TableCell className="font-medium">{c.nome}</TableCell>
                 <TableCell>{c.tipo_cliente}</TableCell>
@@ -73,12 +112,21 @@ function Page() {
                 <TableCell>{c.telefone_principal}</TableCell>
                 <TableCell><div className="flex gap-1">
                   <Button size="sm" variant="ghost" onClick={() => { setForm(c); setOpen(true); }}><Pencil className="h-3 w-3" /></Button>
-                  <Button size="sm" variant="ghost" onClick={() => { if (confirm("Remover?")) remove.mutate(c.id); }}><Trash2 className="h-3 w-3 text-destructive" /></Button>
+                  <Button size="sm" variant="ghost" onClick={() => confirm({
+                    title: "Remover cliente?",
+                    description: `Deseja excluir ${c.nome}? Esta ação não pode ser desfeita.`,
+                    confirmLabel: "Remover",
+                    destructive: true,
+                    onConfirm: () => { remove.mutate(c.id); toast.success("Cliente removido"); },
+                  })}><Trash2 className="h-3 w-3 text-destructive" /></Button>
                 </div></TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+        <div className="px-4 pb-4">
+          <ListPagination page={list.page} totalPages={list.totalPages} totalItems={list.totalItems} onPageChange={list.setPage} />
+        </div>
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>

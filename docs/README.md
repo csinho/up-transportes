@@ -1,46 +1,117 @@
-# ERP Transportadoras — Documentação
+# ERP Operacional para Transportadoras
 
-## Visão geral
-ERP para transportadoras com cadastros, viagens com documentos e geração de PDF da viagem. Stack: TanStack Start, React 19, Tailwind v4, shadcn/ui, React Query, pdfmake.
+## Visão do produto
 
-## Estrutura
-- `src/types/` — tipos espelhando o schema sugerido para Supabase
-- `src/data/store.ts` — store mockado (localStorage) com hooks compatíveis com futura migração para Supabase
-- `src/lib/masks.ts` — máscaras CPF/CNPJ/CEP/telefone/placa (aceita Mercosul)
-- `src/lib/viacep.ts` — integração ViaCEP
-- `src/lib/pdf.ts` — geração do PDF da viagem (pdfmake)
-- `src/components/AddressForm.tsx` — endereço com preenchimento automático por CEP
-- `src/components/DocumentUploader.tsx` — upload + preview + modal de visualização
-- `src/components/layout/AppSidebar.tsx` — navegação lateral
-- `src/routes/` — rotas (uma por módulo)
+Sistema **centrado na viagem**, não em gestão completa de frota. A transportadora cadastra dados de apoio (motoristas, veículos, clientes, produtos/cargas, documentos) para **criar, acompanhar, rastrear e finalizar viagens** em tempo real.
+
+### Fluxo principal
+
+1. Configurar transportadora (`/transportadora`)
+2. Cadastrar motoristas, veículos, clientes e produtos/cargas
+3. **Criar viagem** (`/viagens`) — vincular motorista, veículo, origem, destino e carga
+4. Anexar documentos e gerar PDF da viagem (`/viagens/$id`)
+5. Motorista usa o **PWA** (fase atual: planejado) — status, eventos, localização, ocorrências
+6. Transportadora acompanha no **rastreamento** (`/rastreamento`) — mapa A→B + posição atual
+7. Finalizar viagem — histórico permanece salvo
+
+### Módulos priorizados (versão atual)
+
+| Módulo | Rota | Papel |
+|--------|------|--------|
+| Dashboard operacional | `/` | Viagens em andamento, atrasadas, ocorrências, docs pendentes |
+| **Viagens** | `/viagens`, `/viagens/$id` | **Núcleo do sistema** |
+| Rastreamento | `/rastreamento` | Mapa + Realtime (em integração) |
+| Motoristas | `/motoristas` | Apoio à viagem |
+| Veículos | `/veiculos` | Apoio à viagem |
+| Clientes | `/clientes` | Origem/destino |
+| Produtos/Cargas | `/produtos` | Carga da viagem |
+| Transportadora | `/transportadora` | Configuração e documentos |
+
+### Fase 2 — fora do foco atual
+
+Não priorizar nesta versão:
+
+- Manutenção preventiva, oficina, peças, combustível, multas, IPVA
+- Pneus avançados (estoque, fornecedores, drag-and-drop visual)
+- Financeiro operacional detalhado
+
+O código de pneus/fornecedores/financeiro pode permanecer no `store` para uso futuro, mas **sem rotas na interface**.
+
+### Próximas entregas técnicas
+
+1. **Rastreamento**: Leaflet + marcadores (origem, destino, posição) + Supabase Realtime
+2. **PWA motorista**: mobile-first, offline-first (IndexedDB, Service Worker, fila de sync)
+3. **Geolocalização**: API do navegador + histórico de posições por viagem
+4. **Supabase**: Auth, RLS por `transportadora_id`, Storage para documentos
+5. **Eventos e ocorrências** na entidade viagem (timeline + status)
+
+## Stack
+
+TanStack Start, React 19, Tailwind v4, shadcn/ui, React Query, pdfmake.
+
+## Estrutura de código
+
+- `src/types/` — tipos alinhados ao schema Supabase futuro
+- `src/data/store.ts` — hooks React Query → Supabase
+- `src/lib/masks.ts`, `src/lib/viacep.ts`, `src/lib/pdf.ts`
+- `src/components/AddressForm.tsx`, `DocumentUploader.tsx`
+- `src/components/layout/AppSidebar.tsx` — navegação em grupos: Operação / Cadastros de apoio / Configurações
+- `src/routes/` — uma rota por módulo
 
 ## Multi-tenant
-Toda entidade carrega `transportadora_id`. O topbar tem um seletor de transportadora ativa, persistido em `localStorage`. Os hooks (`useMotoristas` etc.) já filtram pelo tenant ativo, o que mapeia diretamente para uma política RLS `transportadora_id = current_user_tenant()` no Supabase.
 
-## Fluxos principais
-1. **Configurar transportadora** em `/transportadora` — dados, endereço (ViaCEP), documentos.
-2. **Cadastrar motoristas, veículos, clientes, produtos**.
-3. **Criar viagem** em `/viagens` — vincula motorista, veículos, cliente origem/destino (preenche endereços automaticamente), produto.
-4. **Detalhe da viagem** (`/viagens/$id`) — anexar documentos fiscais (NF-e, CT-e, MDF-e, DANFE etc.) e gerar PDF profissional.
+Toda entidade possui `transportadora_id`. O seletor no topbar define o tenant ativo (localStorage). Na migração Supabase: RLS `transportadora_id = current_tenant()`.
 
-## Migração para Supabase
-A camada de dados (`src/data/store.ts`) expõe hooks com a mesma assinatura que terão as chamadas Supabase. Para migrar:
-1. Substituir `list/get/upsert/remove` por `supabase.from('tabela').select/insert/update/delete`
-2. Trocar `arquivo_url` (object URL) por upload em Supabase Storage e usar a URL pública/assinada
-3. Substituir `useActiveTenantId` por `auth.uid()` → resolver tenant via tabela `user_tenants`
-4. Ativar RLS em todas as tabelas filtrando por `transportadora_id`
-5. (Opcional) Mover endereço/documentos da viagem para tabelas relacionadas (`viagem_documentos`) — os tipos já preveem isso
+## Migração Supabase
 
-## Próximas fases
-- **Fase 2** (entregue): Pneus (estoque, fornecedores, drag-and-drop visual de instalação) + financeiro detalhado
-- **Fase 3**: PWA do motorista + rastreamento realtime (Supabase Realtime + Leaflet)
-- **Fase 4**: Offline-first com IndexedDB + service worker + fila de sincronização
-- **Fase 5**: Autenticação (Supabase Auth + roles via `user_roles`)
+### 1. Configurar ambiente
 
-## Fase 2 — o que foi adicionado
-- `src/types/` — `Fornecedor`, `Pneu`, `LancamentoFinanceiro`, posições de pneu
-- `src/data/store.ts` — hooks `useFornecedores`, `usePneus`, `useLancamentos`, `useInstalarPneu`, `useDesinstalarPneu`
-- `src/lib/veiculo-pneus-perfil.ts` — perfis de vista superior por tipo (toco, truck, bitruck, cavalo, implementos, vanderleia)
-- `src/components/TireLayout.tsx` — layout visual dinâmico conforme o tipo do veículo
-- Rotas: `/fornecedores`, `/pneus` (estoque + instalação), `/financeiro` (resumo + lançamentos)
-- PDF de mapa de pneus por veículo em `/veiculos` (ícone de documento na listagem ou botão no modal)
+```bash
+cp .env.example .env.local
+# Preencha VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY (Settings → API no dashboard)
+```
+
+### 2. Aplicar migrations no projeto remoto
+
+**Opção A — CLI (recomendado)**
+
+```bash
+npm run supabase:login    # abre o browser
+npm run supabase:push     # link + db push (projeto tmjbzmjnqkgjwwkrxuxh)
+```
+
+**Opção B — SQL Editor manual**
+
+Se a migration `motorista_auth` ainda não foi aplicada, cole o conteúdo de
+`supabase/apply-pending-manual.sql` no [SQL Editor](https://supabase.com/dashboard/project/tmjbzmjnqkgjwwkrxuxh/sql).
+
+Migrations incluídas:
+
+| Arquivo | Conteúdo |
+|---------|----------|
+| `20260524120000_core_schema.sql` | Tabelas, RLS, bucket `documentos`, Realtime |
+| `20260524120100_link_transportadora_rpc.sql` | RPC `link_my_transportadora` |
+| `20260524130000_motorista_auth.sql` | Login PWA por CPF, RLS motorista |
+| `20260524140000_demo_tenant_storage_motorista.sql` | Tenant inicial + Storage motorista |
+
+### 3. Auth no dashboard
+
+1. Crie um usuário em **Authentication → Users** (login ERP)
+2. Ative **Anonymous Sign-ins** em **Authentication → Providers** (PWA `/motorista`)
+3. No primeiro login ERP, o app vincula à transportadora `Rodoviário Sul Cargas`
+
+### 4. Storage de documentos
+
+- Bucket privado `documentos` (50 MB por arquivo)
+- Path: `{transportadora_id}/{entidade}/{entidade_id}/{timestamp}-{arquivo}`
+- `DocumentUploader` faz upload, preview com URL assinada e remoção no Storage
+
+O app **não funciona sem Supabase** — não há dados mock em localStorage.
+
+## Modelo de viagem (evolução)
+
+Cada viagem deve consolidar:
+
+- Motorista, veículo(s), cliente origem/destino, produto/carga
+- Documentos, datas previstas/reais, status
+- Eventos, ocorrências, histórico de localização (a implementar nos tipos e no store)

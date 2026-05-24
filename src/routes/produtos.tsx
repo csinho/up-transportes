@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useProdutos, useSaveProduto, useRemoveProduto, useActiveTenantId } from "@/data/store";
 import type { ProdutoCarga, UnidadeMedida } from "@/types";
 import { CATEGORIAS_PRODUTO, UNIDADES_MEDIDA } from "@/types";
+import { generateUuid } from "@/lib/uuid";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +15,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useConfirm } from "@/hooks/use-confirm";
+import { useListControls } from "@/hooks/use-list-controls";
+import { ListToolbar } from "@/components/list/ListToolbar";
+import { ListFilterSelect } from "@/components/list/ListFilterSelect";
+import { ListPagination } from "@/components/list/ListPagination";
+import { FILTER_ALL, matchesAny } from "@/lib/list-utils";
 
 export const Route = createFileRoute("/produtos")({
   head: () => ({ meta: [{ title: "Produtos / Cargas — ERP Transportadora" }] }),
@@ -23,7 +30,7 @@ export const Route = createFileRoute("/produtos")({
 function empty(tenantId: string): ProdutoCarga {
   const now = new Date().toISOString();
   return {
-    id: crypto.randomUUID(), transportadora_id: tenantId,
+    id: generateUuid(), transportadora_id: tenantId,
     nome: "", categoria: "Carga seca", unidade_medida: "kg", produto_perigoso: false, status: "ativo",
     created_at: now, updated_at: now,
   };
@@ -34,8 +41,21 @@ function Page() {
   const { data: produtos = [] } = useProdutos();
   const save = useSaveProduto();
   const remove = useRemoveProduto();
+  const { confirm, ConfirmDialogHost } = useConfirm();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<ProdutoCarga | null>(null);
+
+  const list = useListControls({
+    items: produtos,
+    searchFn: (p, q) => matchesAny([p.nome, p.categoria, p.unidade_medida, p.status, p.produto_perigoso ? "perigoso" : "normal"], q),
+    filterFn: (p, f) => {
+      if (f.status && f.status !== FILTER_ALL && p.status !== f.status) return false;
+      if (f.perigoso === "sim" && !p.produto_perigoso) return false;
+      if (f.perigoso === "nao" && p.produto_perigoso) return false;
+      return true;
+    },
+    initialFilters: { status: FILTER_ALL, perigoso: FILTER_ALL },
+  });
 
   const salvar = () => {
     if (!form) return;
@@ -47,23 +67,43 @@ function Page() {
 
   return (
     <div className="space-y-4">
+      <ConfirmDialogHost />
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Produtos / Cargas</h1>
-          <p className="text-sm text-muted-foreground">{produtos.length} cadastrados</p>
+          <p className="text-sm text-muted-foreground">
+            Cargas vinculadas às viagens · {produtos.length} cadastrados
+          </p>
         </div>
         <Button onClick={() => { setForm(empty(tenantId)); setOpen(true); }}><Plus className="h-4 w-4 mr-2" /> Novo produto</Button>
       </div>
 
       <div className="rounded-lg border bg-card">
+        <div className="p-4 border-b">
+          <ListToolbar
+            search={list.search}
+            onSearchChange={list.setSearch}
+            placeholder="Buscar produto, categoria…"
+            totalItems={list.totalItems}
+            page={list.page}
+            pageSize={list.pageSize}
+          >
+            <ListFilterSelect label="Status" value={list.filters.status ?? FILTER_ALL} onChange={(v) => list.setFilter("status", v)} options={[{ value: "ativo", label: "Ativo" }, { value: "inativo", label: "Inativo" }]} />
+            <ListFilterSelect label="Perigoso" value={list.filters.perigoso ?? FILTER_ALL} onChange={(v) => list.setFilter("perigoso", v)} options={[{ value: "sim", label: "Sim" }, { value: "nao", label: "Não" }]} allLabel="Todos" />
+          </ListToolbar>
+        </div>
         <Table>
           <TableHeader><TableRow>
             <TableHead>Nome</TableHead><TableHead>Categoria</TableHead><TableHead>Unidade</TableHead>
             <TableHead>Perigoso</TableHead><TableHead>Status</TableHead><TableHead className="w-[120px]"></TableHead>
           </TableRow></TableHeader>
           <TableBody>
-            {produtos.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum produto cadastrado.</TableCell></TableRow>}
-            {produtos.map((p) => (
+            {list.totalItems === 0 && (
+              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                {list.hasActiveFilters ? "Nenhum produto encontrado." : "Nenhum produto cadastrado."}
+              </TableCell></TableRow>
+            )}
+            {list.paginated.map((p) => (
               <TableRow key={p.id}>
                 <TableCell className="font-medium">{p.nome}</TableCell>
                 <TableCell>{p.categoria}</TableCell>
@@ -72,12 +112,21 @@ function Page() {
                 <TableCell><Badge variant="secondary">{p.status}</Badge></TableCell>
                 <TableCell><div className="flex gap-1">
                   <Button size="sm" variant="ghost" onClick={() => { setForm(p); setOpen(true); }}><Pencil className="h-3 w-3" /></Button>
-                  <Button size="sm" variant="ghost" onClick={() => { if (confirm("Remover?")) remove.mutate(p.id); }}><Trash2 className="h-3 w-3 text-destructive" /></Button>
+                  <Button size="sm" variant="ghost" onClick={() => confirm({
+                    title: "Remover produto?",
+                    description: `Deseja excluir ${p.nome}? Esta ação não pode ser desfeita.`,
+                    confirmLabel: "Remover",
+                    destructive: true,
+                    onConfirm: () => { remove.mutate(p.id); toast.success("Produto removido"); },
+                  })}><Trash2 className="h-3 w-3 text-destructive" /></Button>
                 </div></TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+        <div className="px-4 pb-4">
+          <ListPagination page={list.page} totalPages={list.totalPages} totalItems={list.totalItems} onPageChange={list.setPage} />
+        </div>
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>

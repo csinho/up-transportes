@@ -7,6 +7,7 @@ import {
   useActiveTenantId,
 } from "@/data/store";
 import type { Motorista, StatusMotorista } from "@/types";
+import { generateUuid } from "@/lib/uuid";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,6 +45,13 @@ import { AddressForm } from "@/components/AddressForm";
 import { DocumentUploader } from "@/components/DocumentUploader";
 import { maskCPF, maskPhone } from "@/lib/masks";
 import { toast } from "sonner";
+import { useConfirm } from "@/hooks/use-confirm";
+import { useListControls } from "@/hooks/use-list-controls";
+import { ListToolbar } from "@/components/list/ListToolbar";
+import { ListFilterSelect } from "@/components/list/ListFilterSelect";
+import { ListPagination } from "@/components/list/ListPagination";
+import { FILTER_ALL, matchesAny } from "@/lib/list-utils";
+import { STATUS_MOTORISTA_EDITAVEL } from "@/lib/veiculo-utils";
 
 export const Route = createFileRoute("/motoristas")({
   head: () => ({ meta: [{ title: "Motoristas — ERP Transportadora" }] }),
@@ -61,7 +69,7 @@ const STATUS: { value: StatusMotorista; label: string }[] = [
 function empty(tenantId: string): Motorista {
   const now = new Date().toISOString();
   return {
-    id: crypto.randomUUID(),
+    id: generateUuid(),
     transportadora_id: tenantId,
     nome: "",
     cpf: "",
@@ -79,8 +87,18 @@ function Page() {
   const { data: motoristas = [] } = useMotoristas();
   const save = useSaveMotorista();
   const remove = useRemoveMotorista();
+  const { confirm, ConfirmDialogHost } = useConfirm();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<Motorista | null>(null);
+
+  const list = useListControls({
+    items: motoristas,
+    searchFn: (m, q) =>
+      matchesAny([m.nome, m.cpf, m.cnh.numero, m.cnh.categoria, m.email, m.telefone_principal, m.status], q),
+    filterFn: (m, filters) =>
+      !filters.status || filters.status === FILTER_ALL || m.status === filters.status,
+    initialFilters: { status: FILTER_ALL },
+  });
 
   const novo = () => {
     setForm(empty(tenantId));
@@ -100,15 +118,35 @@ function Page() {
 
   return (
     <div className="space-y-4">
+      <ConfirmDialogHost />
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Motoristas</h1>
-          <p className="text-sm text-muted-foreground">{motoristas.length} cadastrados</p>
+          <p className="text-sm text-muted-foreground">
+            Cadastro de apoio para viagens · {motoristas.length} cadastrados
+          </p>
         </div>
         <Button onClick={novo}><Plus className="h-4 w-4 mr-2" /> Novo motorista</Button>
       </div>
 
       <div className="rounded-lg border bg-card">
+        <div className="p-4 border-b">
+          <ListToolbar
+            search={list.search}
+            onSearchChange={list.setSearch}
+            placeholder="Buscar motorista, CPF, CNH…"
+            totalItems={list.totalItems}
+            page={list.page}
+            pageSize={list.pageSize}
+          >
+            <ListFilterSelect
+              label="Status"
+              value={list.filters.status ?? FILTER_ALL}
+              onChange={(v) => list.setFilter("status", v)}
+              options={STATUS.map((s) => ({ value: s.value, label: s.label }))}
+            />
+          </ListToolbar>
+        </div>
         <Table>
           <TableHeader>
             <TableRow>
@@ -120,10 +158,12 @@ function Page() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {motoristas.length === 0 && (
-              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum motorista cadastrado.</TableCell></TableRow>
+            {list.totalItems === 0 && (
+              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                {list.hasActiveFilters ? "Nenhum motorista encontrado." : "Nenhum motorista cadastrado."}
+              </TableCell></TableRow>
             )}
-            {motoristas.map((m) => (
+            {list.paginated.map((m) => (
               <TableRow key={m.id}>
                 <TableCell className="font-medium">{m.nome}</TableCell>
                 <TableCell>{m.cpf}</TableCell>
@@ -132,13 +172,27 @@ function Page() {
                 <TableCell>
                   <div className="flex gap-1">
                     <Button size="sm" variant="ghost" onClick={() => editar(m)}><Pencil className="h-3 w-3" /></Button>
-                    <Button size="sm" variant="ghost" onClick={() => { if (confirm("Remover motorista?")) remove.mutate(m.id); }}><Trash2 className="h-3 w-3 text-destructive" /></Button>
+                    <Button size="sm" variant="ghost" onClick={() => confirm({
+                      title: "Remover motorista?",
+                      description: `Deseja excluir ${m.nome}? Esta ação não pode ser desfeita.`,
+                      confirmLabel: "Remover",
+                      destructive: true,
+                      onConfirm: () => { remove.mutate(m.id); toast.success("Motorista removido"); },
+                    })}><Trash2 className="h-3 w-3 text-destructive" /></Button>
                   </div>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+        <div className="px-4 pb-4">
+          <ListPagination
+            page={list.page}
+            totalPages={list.totalPages}
+            totalItems={list.totalItems}
+            onPageChange={list.setPage}
+          />
+        </div>
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -162,10 +216,23 @@ function Page() {
                   <div><Label>Nascimento</Label><Input type="date" value={form.data_nascimento ?? ""} onChange={(e) => setForm({ ...form, data_nascimento: e.target.value })} /></div>
                   <div>
                     <Label>Status</Label>
-                    <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as StatusMotorista })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>{STATUS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
-                    </Select>
+                    {form.status === "em_viagem" ? (
+                      <div className="space-y-1">
+                        <Input value="Em viagem" readOnly disabled className="bg-muted" />
+                        <p className="text-xs text-muted-foreground">
+                          Definido automaticamente pela viagem ativa. Finalize ou cancele a viagem para liberar.
+                        </p>
+                      </div>
+                    ) : (
+                      <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as StatusMotorista })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {STATUS_MOTORISTA_EDITAVEL.map((s) => (
+                            <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                   <div><Label>Telefone</Label><Input value={form.telefone_principal ?? ""} onChange={(e) => setForm({ ...form, telefone_principal: maskPhone(e.target.value) })} /></div>
                   <div><Label>WhatsApp</Label><Input value={form.whatsapp ?? ""} onChange={(e) => setForm({ ...form, whatsapp: maskPhone(e.target.value) })} /></div>
@@ -189,6 +256,11 @@ function Page() {
                 <DocumentUploader
                   documentos={form.documentos}
                   onChange={(docs) => setForm({ ...form, documentos: docs })}
+                  uploadContext={{
+                    transportadoraId: tenantId,
+                    entidade: "motoristas",
+                    entidadeId: form.id,
+                  }}
                   tiposSugeridos={["CNH", "RG", "CPF", "Comprovante de endereço", "Certificado"]}
                 />
               </TabsContent>

@@ -175,6 +175,11 @@ function Page() {
           <DocumentUploader
             documentos={form.documentos}
             onChange={(docs) => set("documentos", docs)}
+            uploadContext={{
+              transportadoraId: tenantId,
+              entidade: "transportadoras",
+              entidadeId: form.id,
+            }}
             tiposSugeridos={["Cartão CNPJ", "Comprovante de endereço", "Certificado RNTRC", "Contrato social", "Alvará"]}
           />
         </CardContent>

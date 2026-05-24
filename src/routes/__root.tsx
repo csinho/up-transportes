@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -71,7 +72,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "Lovable App" },
       { name: "description", content: "Lovable Generated Project" },
       { name: "author", content: "Lovable" },
@@ -86,6 +87,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "icon", href: "/icon.svg", type: "image/svg+xml" },
     ],
   }),
   shellComponent: RootShell,
@@ -96,7 +99,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <head>
         <HeadContent />
       </head>
@@ -111,28 +114,56 @@ function RootShell({ children }: { children: React.ReactNode }) {
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { TenantSwitcher } from "@/components/layout/TenantSwitcher";
+import { MotoristaAppLinkCopy } from "@/components/layout/MotoristaAppLinkCopy";
 import { Toaster } from "@/components/ui/sonner";
+import { isMotoristaAppPath } from "@/lib/motorista-app-path";
+import { SupabaseRequired } from "@/components/auth/SupabaseRequired";
+import { ErpAuthGate } from "@/components/auth/ErpAuthGate";
+import { ErpUserMenu } from "@/components/auth/ErpUserMenu";
+import { OperacaoRealtimeBridge } from "@/components/OperacaoRealtimeBridge";
+
+function isPublicAppPath(pathname: string): boolean {
+  return isMotoristaAppPath(pathname) || pathname === "/login";
+}
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isPublic = isPublicAppPath(pathname);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SidebarProvider>
-        <div className="min-h-screen flex w-full bg-background">
-          <AppSidebar />
-          <div className="flex-1 flex flex-col min-w-0">
-            <header className="h-14 border-b flex items-center justify-between px-4 gap-4">
-              <SidebarTrigger />
-              <TenantSwitcher />
-            </header>
-            <main className="flex-1 p-6 overflow-auto">
-              <Outlet />
-            </main>
-          </div>
-        </div>
-        <Toaster />
-      </SidebarProvider>
+      <SupabaseRequired>
+        <OperacaoRealtimeBridge />
+        {isPublic ? (
+          <>
+            <Outlet />
+            <Toaster />
+          </>
+        ) : (
+          <ErpAuthGate>
+          <SidebarProvider>
+            <div className="min-h-screen flex w-full bg-background">
+              <AppSidebar />
+              <div className="flex-1 flex flex-col min-w-0">
+                <header className="h-14 border-b flex items-center justify-between px-4 gap-4">
+                  <SidebarTrigger />
+                  <div className="flex items-center gap-3">
+                    <TenantSwitcher />
+                    <MotoristaAppLinkCopy />
+                    <ErpUserMenu />
+                  </div>
+                </header>
+                <main className="flex-1 p-6 overflow-auto">
+                  <Outlet />
+                </main>
+              </div>
+            </div>
+          </SidebarProvider>
+          <Toaster />
+        </ErpAuthGate>
+        )}
+      </SupabaseRequired>
     </QueryClientProvider>
   );
 }

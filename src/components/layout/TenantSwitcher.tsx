@@ -15,7 +15,15 @@ export function TenantSwitcher() {
   const [active, setActive] = useState<string>("");
 
   useEffect(() => {
-    setActive(getActiveTransportadoraId());
+    const stored = getActiveTransportadoraId();
+    if (stored && transportadoras.some((t) => t.id === stored)) {
+      setActive(stored);
+      return;
+    }
+    if (transportadoras[0]) {
+      setActiveTransportadoraId(transportadoras[0].id);
+      setActive(transportadoras[0].id);
+    }
   }, [transportadoras]);
 
   if (!transportadoras.length) return null;

@@ -1,12 +1,8 @@
 /**
- * Store mockado em memória + persistência simples em localStorage.
- *
- * A intenção é manter assinatura compatível com uma futura migração para Supabase.
- * Para migrar:
- *  - Substituir cada `list/get/create/update/remove` por chamadas `supabase.from('tabela').*`
- *  - Manter os mesmos shapes definidos em src/types
- *  - Aplicar RLS por transportadora_id no banco
+ * Camada de dados — Supabase (React Query).
+ * Requer VITE_SUPABASE_* e sessão auth (ERP ou motorista).
  */
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type {
   Transportadora,
@@ -15,12 +11,18 @@ import type {
   Cliente,
   ProdutoCarga,
   Viagem,
+  ViagemEvento,
+  ViagemOcorrencia,
+  ViagemLocalizacao,
   Fornecedor,
   Pneu,
   LancamentoFinanceiro,
   UUID,
   PosicaoPneu,
 } from "@/types";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { requireSupabaseSession } from "@/lib/supabase/session";
+import * as sb from "@/data/supabase-repository";
 
 type Tables = {
   transportadoras: Transportadora;
@@ -29,164 +31,154 @@ type Tables = {
   clientes: Cliente;
   produtos: ProdutoCarga;
   viagens: Viagem;
+  viagem_eventos: ViagemEvento;
+  viagem_ocorrencias: ViagemOcorrencia;
+  viagem_localizacoes: ViagemLocalizacao;
   fornecedores: Fornecedor;
   pneus: Pneu;
   lancamentos: LancamentoFinanceiro;
 };
 
-const STORAGE_KEY = "erp_transp_db_v1";
-const ACTIVE_KEY = "erp_transp_active_v1";
+const ACTIVE_KEY = "erp_transp_active_v6";
 
-type DB = {
-  transportadoras: Transportadora[];
-  motoristas: Motorista[];
-  veiculos: Veiculo[];
-  clientes: Cliente[];
-  produtos: ProdutoCarga[];
-  viagens: Viagem[];
-  fornecedores: Fornecedor[];
-  pneus: Pneu[];
-  lancamentos: LancamentoFinanceiro[];
-};
+export const DB_CHANGE_EVENT = "erp-transp-db-change";
 
-function emptyDB(): DB {
-  return {
-    transportadoras: [],
-    motoristas: [],
-    veiculos: [],
-    clientes: [],
-    produtos: [],
-    viagens: [],
-    fornecedores: [],
-    pneus: [],
-    lancamentos: [],
-  };
-}
-
-function seedDB(): DB {
-  const now = new Date().toISOString();
-  const tId = crypto.randomUUID();
-  const t: Transportadora = {
-    id: tId,
-    nome_fantasia: "Transportes Exemplo",
-    razao_social: "Transportes Exemplo LTDA",
-    cnpj: "00.000.000/0001-00",
-    tipo_transportador: "ETC",
-    rntrc: "12345678",
-    telefone_principal: "(11) 99999-0000",
-    email: "contato@exemplo.com.br",
-    endereco: {
-      cep: "01001-000",
-      logradouro: "Praça da Sé",
-      numero: "100",
-      bairro: "Sé",
-      cidade: "São Paulo",
-      uf: "SP",
-      pais: "Brasil",
-    },
-    documentos: [],
-    created_at: now,
-    updated_at: now,
-  };
-  return { ...emptyDB(), transportadoras: [t] };
-}
-
-function loadDB(): DB {
-  if (typeof window === "undefined") return emptyDB();
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      const seeded = seedDB();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));
-      return seeded;
-    }
-    const parsed = JSON.parse(raw) as DB;
-    return { ...emptyDB(), ...parsed };
-  } catch {
-    return seedDB();
+async function assertDataAccess(): Promise<void> {
+  if (!isSupabaseConfigured()) {
+    throw new Error("Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env.local");
+  }
+  if (!(await requireSupabaseSession())) {
+    throw new Error("Faça login para continuar.");
   }
 }
 
-function saveDB(db: DB) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-}
-
-let _db: DB | null = null;
-function db(): DB {
-  if (!_db) _db = loadDB();
-  return _db;
-}
-
 export function getActiveTransportadoraId(): UUID {
-  if (typeof window === "undefined") return db().transportadoras[0]?.id ?? "";
-  const stored = localStorage.getItem(ACTIVE_KEY);
-  if (stored && db().transportadoras.some((t) => t.id === stored)) return stored;
-  const first = db().transportadoras[0]?.id ?? "";
-  if (first) localStorage.setItem(ACTIVE_KEY, first);
-  return first;
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem(ACTIVE_KEY) ?? "";
 }
 
 export function setActiveTransportadoraId(id: UUID) {
   if (typeof window === "undefined") return;
   localStorage.setItem(ACTIVE_KEY, id);
+  window.dispatchEvent(new CustomEvent(DB_CHANGE_EVENT));
 }
 
-// CRUD genérico
-function list<K extends keyof Tables>(table: K): Tables[K][] {
-  return db()[table] as Tables[K][];
+function invalidateRecursosQueries(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ["viagens"] });
+  qc.invalidateQueries({ queryKey: ["motoristas"] });
+  qc.invalidateQueries({ queryKey: ["veiculos"] });
 }
 
-function get<K extends keyof Tables>(table: K, id: UUID): Tables[K] | undefined {
-  return list(table).find((r) => (r as { id: UUID }).id === id);
+export function invalidateMotoristaData(qc: ReturnType<typeof useQueryClient>) {
+  invalidateRecursosQueries(qc);
+  qc.invalidateQueries({ queryKey: ["viagem_eventos"] });
+  qc.invalidateQueries({ queryKey: ["viagem_ocorrencias"] });
+  qc.invalidateQueries({ queryKey: ["viagem_localizacoes"] });
 }
 
-function upsert<K extends keyof Tables>(table: K, record: Tables[K]): Tables[K] {
-  const arr = db()[table] as Tables[K][];
-  const idx = arr.findIndex((r) => (r as { id: UUID }).id === (record as { id: UUID }).id);
-  if (idx >= 0) arr[idx] = record;
-  else arr.push(record);
-  saveDB(db());
-  return record;
+export async function persistViagem(record: Viagem): Promise<Viagem> {
+  await assertDataAccess();
+  return sb.sbUpsertViagem(record);
 }
 
-function remove<K extends keyof Tables>(table: K, id: UUID) {
-  const arr = db()[table] as Tables[K][];
-  const idx = arr.findIndex((r) => (r as { id: UUID }).id === id);
-  if (idx >= 0) {
-    arr.splice(idx, 1);
-    saveDB(db());
-  }
+export async function persistViagemEvento(record: ViagemEvento): Promise<ViagemEvento> {
+  await assertDataAccess();
+  return sb.sbUpsertViagemEvento(record);
 }
 
-// Hooks reutilizáveis ─────────────────────────────────────────────────────────
+export async function persistViagemOcorrencia(record: ViagemOcorrencia): Promise<ViagemOcorrencia> {
+  await assertDataAccess();
+  return sb.sbUpsertViagemOcorrencia(record);
+}
+
+export async function persistViagemLocalizacao(record: ViagemLocalizacao): Promise<ViagemLocalizacao> {
+  await assertDataAccess();
+  return sb.sbUpsertViagemLocalizacao(record);
+}
 
 function useTenantList<K extends keyof Tables>(table: K) {
   const tenant = useActiveTenantId();
   return useQuery({
     queryKey: [table, tenant],
-    queryFn: () =>
-      list(table).filter((r) => {
-        if (table === "transportadoras") return true;
-        return (r as { transportadora_id?: UUID }).transportadora_id === tenant;
-      }),
+    enabled: !!tenant,
+    queryFn: async () => {
+      await assertDataAccess();
+      switch (table) {
+        case "motoristas":
+          return sb.sbListMotoristas(tenant) as Tables[K][];
+        case "veiculos":
+          return sb.sbListVeiculos(tenant) as Tables[K][];
+        case "clientes":
+          return sb.sbListClientes(tenant) as Tables[K][];
+        case "produtos":
+          return sb.sbListProdutos(tenant) as Tables[K][];
+        case "viagens":
+          return sb.sbListViagens(tenant) as Tables[K][];
+        default:
+          return [] as Tables[K][];
+      }
+    },
   });
 }
 
 function useEntity<K extends keyof Tables>(table: K, id: UUID | undefined) {
   return useQuery({
     queryKey: [table, "one", id],
-    queryFn: () => (id ? get(table, id) ?? null : null),
     enabled: !!id,
+    queryFn: async () => {
+      if (!id) return null;
+      await assertDataAccess();
+      switch (table) {
+        case "transportadoras":
+          return sb.sbGetTransportadora(id);
+        case "motoristas":
+          return sb.sbGetMotorista(id);
+        case "veiculos":
+          return sb.sbGetVeiculo(id);
+        case "clientes":
+          return sb.sbGetCliente(id);
+        case "produtos":
+          return sb.sbGetProduto(id);
+        case "viagens":
+          return sb.sbGetViagem(id);
+        default:
+          return null;
+      }
+    },
   });
 }
 
 function useUpsert<K extends keyof Tables>(table: K) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (rec: Tables[K]) => upsert(table, rec),
+    mutationFn: async (rec: Tables[K]) => {
+      await assertDataAccess();
+      switch (table) {
+        case "transportadoras":
+          return sb.sbUpsertTransportadora(rec as Transportadora) as Tables[K];
+        case "motoristas":
+          return sb.sbUpsertMotorista(rec as Motorista) as Tables[K];
+        case "veiculos":
+          return sb.sbUpsertVeiculo(rec as Veiculo) as Tables[K];
+        case "clientes":
+          return sb.sbUpsertCliente(rec as Cliente) as Tables[K];
+        case "produtos":
+          return sb.sbUpsertProduto(rec as ProdutoCarga) as Tables[K];
+        case "viagens":
+          return sb.sbUpsertViagem(rec as Viagem) as Tables[K];
+        case "viagem_eventos":
+          return sb.sbUpsertViagemEvento(rec as ViagemEvento) as Tables[K];
+        case "viagem_ocorrencias":
+          return sb.sbUpsertViagemOcorrencia(rec as ViagemOcorrencia) as Tables[K];
+        case "viagem_localizacoes":
+          return sb.sbUpsertViagemLocalizacao(rec as ViagemLocalizacao) as Tables[K];
+        default:
+          throw new Error(`Entidade "${String(table)}" não disponível no Supabase.`);
+      }
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [table] });
+      if (table === "viagens") invalidateRecursosQueries(qc);
     },
   });
 }
@@ -194,26 +186,58 @@ function useUpsert<K extends keyof Tables>(table: K) {
 function useRemove<K extends keyof Tables>(table: K) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: UUID) => remove(table, id),
+    mutationFn: async (id: UUID) => {
+      await assertDataAccess();
+      switch (table) {
+        case "motoristas":
+          return sb.sbRemoveMotorista(id);
+        case "veiculos":
+          return sb.sbRemoveVeiculo(id);
+        case "clientes":
+          return sb.sbRemoveCliente(id);
+        case "produtos":
+          return sb.sbRemoveProduto(id);
+        case "viagens":
+          return sb.sbRemoveViagem(id);
+        default:
+          throw new Error(`Remoção de "${String(table)}" não disponível no Supabase.`);
+      }
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [table] });
+      if (table === "viagens") invalidateRecursosQueries(qc);
     },
   });
 }
 
-// Active tenant ───────────────────────────────────────────────────────────────
-import { useEffect, useState } from "react";
 export function useActiveTenantId() {
-  const [id, setId] = useState<UUID>(() => (typeof window === "undefined" ? "" : getActiveTransportadoraId()));
+  const [id, setId] = useState<UUID>(() =>
+    typeof window === "undefined" ? "" : getActiveTransportadoraId(),
+  );
+
   useEffect(() => {
-    setId(getActiveTransportadoraId());
+    const refresh = () => setId(getActiveTransportadoraId());
+    refresh();
+    window.addEventListener(DB_CHANGE_EVENT, refresh);
+    window.addEventListener("motorista-session", refresh);
+    return () => {
+      window.removeEventListener(DB_CHANGE_EVENT, refresh);
+      window.removeEventListener("motorista-session", refresh);
+    };
   }, []);
+
   return id;
 }
 
-// API pública por entidade ─────────────────────────────────────────────────────
 export const useTransportadoras = () =>
-  useQuery({ queryKey: ["transportadoras"], queryFn: () => list("transportadoras") });
+  useQuery({
+    queryKey: ["transportadoras"],
+    queryFn: async () => {
+      await assertDataAccess();
+      return sb.sbListTransportadoras();
+    },
+  });
+
 export const useTransportadora = (id: UUID | undefined) => useEntity("transportadoras", id);
 export const useSaveTransportadora = () => useUpsert("transportadoras");
 
@@ -239,118 +263,197 @@ export const useRemoveProduto = () => useRemove("produtos");
 
 export const useViagens = () => useTenantList("viagens");
 export const useViagem = (id: UUID | undefined) => useEntity("viagens", id);
-export const useSaveViagem = () => useUpsert("viagens");
-export const useRemoveViagem = () => useRemove("viagens");
 
-export const useFornecedores = () => useTenantList("fornecedores");
-export const useFornecedor = (id: UUID | undefined) => useEntity("fornecedores", id);
-export const useSaveFornecedor = () => useUpsert("fornecedores");
-export const useRemoveFornecedor = () => useRemove("fornecedores");
+export const useSaveViagem = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (rec: Viagem) => {
+      await assertDataAccess();
+      return sb.sbUpsertViagem(rec);
+    },
+    onSuccess: () => invalidateRecursosQueries(qc),
+  });
+};
 
-export const usePneus = () => useTenantList("pneus");
-export const usePneu = (id: UUID | undefined) => useEntity("pneus", id);
-export const useSavePneu = () => useUpsert("pneus");
-export const useRemovePneu = () => useRemove("pneus");
+export const useRemoveViagem = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: UUID) => {
+      await assertDataAccess();
+      return sb.sbRemoveViagem(id);
+    },
+    onSuccess: () => invalidateRecursosQueries(qc),
+  });
+};
 
-export const useLancamentos = () => useTenantList("lancamentos");
-export const useLancamento = (id: UUID | undefined) => useEntity("lancamentos", id);
-export const useSaveLancamento = () => useUpsert("lancamentos");
-export const useRemoveLancamento = () => useRemove("lancamentos");
+type ViagemSubListOptions = {
+  pollMs?: number;
+};
 
-export function nextViagemNumero(transportadora_id: UUID): number {
-  const ids = list("viagens")
-    .filter((v) => v.transportadora_id === transportadora_id)
-    .map((v) => v.numero_viagem || 0);
-  return (ids.length ? Math.max(...ids) : 0) + 1;
-}
+function useViagemSubList<T extends { transportadora_id: UUID; viagem_id: UUID; created_at: string }>(
+  table: "viagem_eventos" | "viagem_ocorrencias" | "viagem_localizacoes",
+  viagemId: UUID | undefined,
+  sortFn?: (a: T, b: T) => number,
+  options?: ViagemSubListOptions,
+) {
+  const tenant = useActiveTenantId();
+  const queryKey = [table, tenant, viagemId] as const;
 
-/** Instala um pneu em posição do veículo; libera pneu anterior na mesma posição. */
-export function instalarPneu(
-  pneuId: UUID,
-  veiculoId: UUID,
-  posicao: PosicaoPneu,
-  hodometro?: number,
-): Pneu {
-  const pneu = get("pneus", pneuId);
-  if (!pneu) throw new Error("Pneu não encontrado");
-
-  const ocupando = list("pneus").find(
-    (p) => p.veiculo_id === veiculoId && p.posicao === posicao && p.id !== pneuId,
-  );
-  if (ocupando) {
-    upsert("pneus", {
-      ...ocupando,
-      veiculo_id: undefined,
-      posicao: undefined,
-      status: "estoque",
-      updated_at: new Date().toISOString(),
-    });
-  }
-
-  if (pneu.veiculo_id && pneu.posicao) {
-    const antigaPos = pneu.posicao;
-    const antigoVeiculo = pneu.veiculo_id;
-    if (antigoVeiculo !== veiculoId || antigaPos !== posicao) {
-      // pneu movido de outro lugar — posição antiga fica vazia
-    }
-  }
-
-  const now = new Date().toISOString();
-  return upsert("pneus", {
-    ...pneu,
-    veiculo_id: veiculoId,
-    posicao,
-    status: "instalado",
-    hodometro_instalacao: hodometro ?? pneu.hodometro_instalacao,
-    updated_at: now,
+  return useQuery({
+    queryKey,
+    enabled: !!viagemId && !!tenant,
+    queryFn: async () => {
+      await assertDataAccess();
+      let rows: ViagemEvento[] | ViagemOcorrencia[] | ViagemLocalizacao[];
+      if (table === "viagem_eventos") {
+        rows = await sb.sbListViagemEventos(tenant, viagemId);
+      } else if (table === "viagem_ocorrencias") {
+        rows = await sb.sbListViagemOcorrencias(tenant, viagemId);
+      } else {
+        rows = await sb.sbListViagemLocalizacoes(tenant, viagemId);
+      }
+      if (sortFn) rows = [...rows].sort(sortFn as (a: typeof rows[0], b: typeof rows[0]) => number);
+      return rows as T[];
+    },
+    refetchInterval: options?.pollMs,
   });
 }
 
-/** Remove pneu do veículo e devolve ao estoque. */
-export function desinstalarPneu(pneuId: UUID): Pneu {
-  const pneu = get("pneus", pneuId);
-  if (!pneu) throw new Error("Pneu não encontrado");
-  return upsert("pneus", {
-    ...pneu,
-    veiculo_id: undefined,
-    posicao: undefined,
-    status: "estoque",
-    updated_at: new Date().toISOString(),
-  });
-}
-
-export function pneusDoVeiculo(veiculoId: UUID): Pneu[] {
-  return list("pneus").filter((p) => p.veiculo_id === veiculoId && p.status === "instalado");
-}
-
-export function pneusEmEstoque(transportadoraId: UUID): Pneu[] {
-  return list("pneus").filter(
-    (p) => p.transportadora_id === transportadoraId && p.status === "estoque",
+export const useViagemEventos = (viagemId: UUID | undefined) =>
+  useViagemSubList<ViagemEvento>("viagem_eventos", viagemId, (a, b) =>
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
   );
+
+export const useViagemOcorrencias = (viagemId: UUID | undefined) =>
+  useViagemSubList<ViagemOcorrencia>("viagem_ocorrencias", viagemId, (a, b) =>
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  );
+
+export const useViagemLocalizacoes = (
+  viagemId: UUID | undefined,
+  options?: ViagemSubListOptions,
+) =>
+  useViagemSubList<ViagemLocalizacao>(
+    "viagem_localizacoes",
+    viagemId,
+    (a, b) => new Date(b.registrado_em).getTime() - new Date(a.registrado_em).getTime(),
+    options,
+  );
+
+export const useAllViagemLocalizacoes = (options?: ViagemSubListOptions) => {
+  const tenant = useActiveTenantId();
+  return useQuery({
+    queryKey: ["viagem_localizacoes", tenant, "all"],
+    enabled: !!tenant,
+    queryFn: async () => {
+      await assertDataAccess();
+      return sb.sbListViagemLocalizacoes(tenant);
+    },
+    refetchInterval: options?.pollMs,
+  });
+};
+
+export const useSaveViagemEvento = () => useUpsert("viagem_eventos");
+export const useSaveViagemOcorrencia = () => useUpsert("viagem_ocorrencias");
+export const useSaveViagemLocalizacao = () => useUpsert("viagem_localizacoes");
+
+export const useFornecedores = () =>
+  useQuery({ queryKey: ["fornecedores"], queryFn: async () => [] as Fornecedor[], enabled: false });
+
+export const useFornecedor = (_id: UUID | undefined) =>
+  useQuery({ queryKey: ["fornecedores", "one", _id], queryFn: async () => null, enabled: false });
+
+export const useSaveFornecedor = () =>
+  useMutation({
+    mutationFn: async () => {
+      throw new Error("Fornecedores não disponível — módulo fora do escopo.");
+    },
+  });
+
+export const useRemoveFornecedor = () =>
+  useMutation({
+    mutationFn: async () => {
+      throw new Error("Fornecedores não disponível — módulo fora do escopo.");
+    },
+  });
+
+export const usePneus = () =>
+  useQuery({ queryKey: ["pneus"], queryFn: async () => [] as Pneu[], enabled: false });
+
+export const usePneu = (_id: UUID | undefined) =>
+  useQuery({ queryKey: ["pneus", "one", _id], queryFn: async () => null, enabled: false });
+
+export const useSavePneu = () =>
+  useMutation({
+    mutationFn: async () => {
+      throw new Error("Pneus não disponível — módulo fora do escopo.");
+    },
+  });
+
+export const useRemovePneu = () =>
+  useMutation({
+    mutationFn: async () => {
+      throw new Error("Pneus não disponível — módulo fora do escopo.");
+    },
+  });
+
+export const useLancamentos = () =>
+  useQuery({
+    queryKey: ["lancamentos"],
+    queryFn: async () => [] as LancamentoFinanceiro[],
+    enabled: false,
+  });
+
+export const useLancamento = (_id: UUID | undefined) =>
+  useQuery({ queryKey: ["lancamentos", "one", _id], queryFn: async () => null, enabled: false });
+
+export const useSaveLancamento = () =>
+  useMutation({
+    mutationFn: async () => {
+      throw new Error("Financeiro não disponível — módulo fora do escopo.");
+    },
+  });
+
+export const useRemoveLancamento = () =>
+  useMutation({
+    mutationFn: async () => {
+      throw new Error("Financeiro não disponível — módulo fora do escopo.");
+    },
+  });
+
+export async function nextViagemNumero(transportadora_id: UUID): Promise<number> {
+  await assertDataAccess();
+  return sb.sbNextViagemNumero(transportadora_id);
+}
+
+export function instalarPneu(): never {
+  throw new Error("Módulo de pneus não disponível.");
+}
+
+export function desinstalarPneu(): never {
+  throw new Error("Módulo de pneus não disponível.");
+}
+
+export function pneusDoVeiculo(_veiculoId: UUID): Pneu[] {
+  return [];
+}
+
+export function pneusEmEstoque(_transportadoraId: UUID): Pneu[] {
+  return [];
 }
 
 export function useInstalarPneu() {
-  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({
-      pneuId,
-      veiculoId,
-      posicao,
-      hodometro,
-    }: {
-      pneuId: UUID;
-      veiculoId: UUID;
-      posicao: PosicaoPneu;
-      hodometro?: number;
-    }) => instalarPneu(pneuId, veiculoId, posicao, hodometro),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["pneus"] }),
+    mutationFn: async () => {
+      throw new Error("Módulo de pneus não disponível.");
+    },
   });
 }
 
 export function useDesinstalarPneu() {
-  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (pneuId: UUID) => desinstalarPneu(pneuId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["pneus"] }),
+    mutationFn: async () => {
+      throw new Error("Módulo de pneus não disponível.");
+    },
   });
 }
