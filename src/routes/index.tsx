@@ -3,12 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   useMotoristas,
   useVeiculos,
-  useClientes,
   useProdutos,
   useViagens,
+  usePneus,
+  useLancamentos,
 } from "@/data/store";
-import { Users, Truck, Briefcase, Package, Route as RouteIcon, AlertTriangle } from "lucide-react";
+import { Users, Truck, Package, Route as RouteIcon, AlertTriangle, CircleDot, Wallet } from "lucide-react";
 import { differenceInDays } from "date-fns";
+import { formatCurrency } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -23,11 +25,18 @@ export const Route = createFileRoute("/")({
 function Dashboard() {
   const { data: motoristas = [] } = useMotoristas();
   const { data: veiculos = [] } = useVeiculos();
-  const { data: clientes = [] } = useClientes();
   const { data: produtos = [] } = useProdutos();
   const { data: viagens = [] } = useViagens();
+  const { data: pneus = [] } = usePneus();
+  const { data: lancamentos = [] } = useLancamentos();
 
   const viagensPorStatus = (s: string) => viagens.filter((v) => v.status === s).length;
+
+  const saldoFinanceiro = lancamentos
+    .filter((l) => l.status === "pago")
+    .reduce((s, l) => s + (l.tipo === "receita" ? l.valor : -l.valor), 0);
+  const pneusEstoque = pneus.filter((p) => p.status === "estoque").length;
+  const pneusSulcoBaixo = pneus.filter((p) => p.sulco_atual_mm != null && p.sulco_atual_mm <= 3).length;
 
   const cnhVencendo = motoristas.filter((m) => {
     if (!m.cnh?.data_validade) return false;
@@ -49,11 +58,12 @@ function Dashboard() {
         <p className="text-sm text-muted-foreground">Visão geral da sua operação.</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <StatCard icon={RouteIcon} label="Viagens" value={viagens.length} />
         <StatCard icon={Users} label="Motoristas" value={motoristas.length} />
         <StatCard icon={Truck} label="Veículos" value={veiculos.length} />
-        <StatCard icon={Briefcase} label="Clientes" value={clientes.length} />
+        <StatCard icon={CircleDot} label="Pneus estoque" value={pneusEstoque} />
+        <StatCard icon={Wallet} label="Saldo (pagos)" value={saldoFinanceiro} money />
         <StatCard icon={Package} label="Produtos" value={produtos.length} />
       </div>
 
@@ -107,6 +117,10 @@ function Dashboard() {
               </span>
             </div>
             <div className="flex justify-between rounded-md border p-2">
+              <span>Pneus com sulco ≤ 3 mm</span>
+              <span className="font-semibold">{pneusSulcoBaixo}</span>
+            </div>
+            <div className="flex justify-between rounded-md border p-2">
               <span>Veículos em manutenção</span>
               <span className="font-semibold">
                 {veiculos.filter((v) => v.status === "em_manutencao").length}
@@ -123,10 +137,12 @@ function StatCard({
   icon: Icon,
   label,
   value,
+  money,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: number;
+  money?: boolean;
 }) {
   return (
     <Card>
@@ -134,7 +150,7 @@ function StatCard({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs text-muted-foreground">{label}</p>
-            <p className="text-2xl font-bold">{value}</p>
+            <p className="text-2xl font-bold">{money ? formatCurrency(value) : value}</p>
           </div>
           <Icon className="h-6 w-6 text-muted-foreground" />
         </div>

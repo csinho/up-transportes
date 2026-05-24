@@ -7,6 +7,9 @@ import {
   Briefcase,
   Package,
   Route as RouteIcon,
+  CircleDot,
+  Factory,
+  Wallet,
 } from "lucide-react";
 import {
   Sidebar,
@@ -28,6 +31,9 @@ const items = [
   { title: "Clientes", url: "/clientes", icon: Briefcase },
   { title: "Produtos / Cargas", url: "/produtos", icon: Package },
   { title: "Viagens", url: "/viagens", icon: RouteIcon },
+  { title: "Fornecedores", url: "/fornecedores", icon: Factory },
+  { title: "Pneus", url: "/pneus", icon: CircleDot },
+  { title: "Financeiro", url: "/financeiro", icon: Wallet },
 ];
 
 export function AppSidebar() {

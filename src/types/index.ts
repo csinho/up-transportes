@@ -285,3 +285,141 @@ export interface Viagem {
   created_at: ISODate;
   updated_at: ISODate;
 }
+
+// ── Fase 2: Pneus + Financeiro ───────────────────────────────────────────────
+
+export type TipoFornecedor = "PF" | "PJ";
+
+export interface Fornecedor {
+  id: UUID;
+  transportadora_id: UUID;
+  tipo: TipoFornecedor;
+  nome: string;
+  razao_social?: string;
+  cnpj?: string;
+  cpf?: string;
+  inscricao_estadual?: string;
+  telefone_principal?: string;
+  telefone_secundario?: string;
+  email?: string;
+  contato_responsavel?: string;
+  endereco: Endereco;
+  observacoes?: string;
+  created_at: ISODate;
+  updated_at: ISODate;
+}
+
+export type StatusPneu = "estoque" | "instalado" | "recapagem" | "descartado";
+
+export const MEDIDAS_PNEU = [
+  "275/80R22.5",
+  "295/80R22.5",
+  "315/80R22.5",
+  "11R22.5",
+  "12R22.5",
+  "385/65R22.5",
+  "215/75R17.5",
+  "235/75R17.5",
+  "Outra",
+] as const;
+
+export type PosicaoPneu =
+  | "dianteiro_esq"
+  | "dianteiro_dir"
+  | "dianteiro2_esq"
+  | "dianteiro2_dir"
+  | "eixo2_esq_externo"
+  | "eixo2_esq_interno"
+  | "eixo2_dir_interno"
+  | "eixo2_dir_externo"
+  | "eixo3_esq_externo"
+  | "eixo3_esq_interno"
+  | "eixo3_dir_interno"
+  | "eixo3_dir_externo"
+  | "eixo4_esq_externo"
+  | "eixo4_esq_interno"
+  | "eixo4_dir_interno"
+  | "eixo4_dir_externo"
+  | "estepe";
+
+export const POSICOES_PNEU: { value: PosicaoPneu; label: string; eixo: number }[] = [
+  { value: "dianteiro_esq", label: "Dianteiro E", eixo: 1 },
+  { value: "dianteiro_dir", label: "Dianteiro D", eixo: 1 },
+  { value: "dianteiro2_esq", label: "Dianteiro 2 E", eixo: 2 },
+  { value: "dianteiro2_dir", label: "Dianteiro 2 D", eixo: 2 },
+  { value: "eixo2_esq_externo", label: "Eixo 2 EE", eixo: 2 },
+  { value: "eixo2_esq_interno", label: "Eixo 2 EI", eixo: 2 },
+  { value: "eixo2_dir_interno", label: "Eixo 2 DI", eixo: 2 },
+  { value: "eixo2_dir_externo", label: "Eixo 2 DE", eixo: 2 },
+  { value: "eixo3_esq_externo", label: "Eixo 3 EE", eixo: 3 },
+  { value: "eixo3_esq_interno", label: "Eixo 3 EI", eixo: 3 },
+  { value: "eixo3_dir_interno", label: "Eixo 3 DI", eixo: 3 },
+  { value: "eixo3_dir_externo", label: "Eixo 3 DE", eixo: 3 },
+  { value: "eixo4_esq_externo", label: "Eixo 4 EE", eixo: 4 },
+  { value: "eixo4_esq_interno", label: "Eixo 4 EI", eixo: 4 },
+  { value: "eixo4_dir_interno", label: "Eixo 4 DI", eixo: 4 },
+  { value: "eixo4_dir_externo", label: "Eixo 4 DE", eixo: 4 },
+  { value: "estepe", label: "Estepe", eixo: 0 },
+];
+
+export interface Pneu {
+  id: UUID;
+  transportadora_id: UUID;
+  codigo_fogo: string;
+  marca: string;
+  modelo?: string;
+  medida: string;
+  dot?: string;
+  numero_serie?: string;
+  fornecedor_id?: UUID;
+  valor_compra?: number;
+  data_compra?: ISODate;
+  sulco_inicial_mm?: number;
+  sulco_atual_mm?: number;
+  hodometro_instalacao?: number;
+  status: StatusPneu;
+  veiculo_id?: UUID;
+  posicao?: PosicaoPneu;
+  observacoes?: string;
+  created_at: ISODate;
+  updated_at: ISODate;
+}
+
+export type TipoLancamento = "receita" | "despesa";
+
+export const CATEGORIAS_FINANCEIRAS = [
+  { value: "frete", label: "Frete", tipo: "receita" as const },
+  { value: "adiantamento", label: "Adiantamento", tipo: "receita" as const },
+  { value: "combustivel", label: "Combustível", tipo: "despesa" as const },
+  { value: "manutencao", label: "Manutenção", tipo: "despesa" as const },
+  { value: "pneus", label: "Pneus", tipo: "despesa" as const },
+  { value: "pedagio", label: "Pedágio", tipo: "despesa" as const },
+  { value: "salario", label: "Salário / Pró-labore", tipo: "despesa" as const },
+  { value: "impostos", label: "Impostos", tipo: "despesa" as const },
+  { value: "seguro", label: "Seguro", tipo: "despesa" as const },
+  { value: "outros", label: "Outros", tipo: "despesa" as const },
+] as const;
+
+export type CategoriaFinanceira = (typeof CATEGORIAS_FINANCEIRAS)[number]["value"];
+
+export type StatusLancamento = "pendente" | "pago" | "cancelado";
+
+export interface LancamentoFinanceiro {
+  id: UUID;
+  transportadora_id: UUID;
+  tipo: TipoLancamento;
+  categoria: CategoriaFinanceira;
+  descricao: string;
+  valor: number;
+  data_lancamento: ISODate;
+  data_vencimento?: ISODate;
+  data_pagamento?: ISODate;
+  status: StatusLancamento;
+  viagem_id?: UUID;
+  veiculo_id?: UUID;
+  fornecedor_id?: UUID;
+  forma_pagamento?: string;
+  observacoes?: string;
+  created_at: ISODate;
+  updated_at: ISODate;
+}

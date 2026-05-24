@@ -15,7 +15,11 @@ import type {
   Cliente,
   ProdutoCarga,
   Viagem,
+  Fornecedor,
+  Pneu,
+  LancamentoFinanceiro,
   UUID,
+  PosicaoPneu,
 } from "@/types";
 
 type Tables = {
@@ -25,6 +29,9 @@ type Tables = {
   clientes: Cliente;
   produtos: ProdutoCarga;
   viagens: Viagem;
+  fornecedores: Fornecedor;
+  pneus: Pneu;
+  lancamentos: LancamentoFinanceiro;
 };
 
 const STORAGE_KEY = "erp_transp_db_v1";
@@ -37,6 +44,9 @@ type DB = {
   clientes: Cliente[];
   produtos: ProdutoCarga[];
   viagens: Viagem[];
+  fornecedores: Fornecedor[];
+  pneus: Pneu[];
+  lancamentos: LancamentoFinanceiro[];
 };
 
 function emptyDB(): DB {
@@ -47,6 +57,9 @@ function emptyDB(): DB {
     clientes: [],
     produtos: [],
     viagens: [],
+    fornecedores: [],
+    pneus: [],
+    lancamentos: [],
   };
 }
 
@@ -229,9 +242,115 @@ export const useViagem = (id: UUID | undefined) => useEntity("viagens", id);
 export const useSaveViagem = () => useUpsert("viagens");
 export const useRemoveViagem = () => useRemove("viagens");
 
+export const useFornecedores = () => useTenantList("fornecedores");
+export const useFornecedor = (id: UUID | undefined) => useEntity("fornecedores", id);
+export const useSaveFornecedor = () => useUpsert("fornecedores");
+export const useRemoveFornecedor = () => useRemove("fornecedores");
+
+export const usePneus = () => useTenantList("pneus");
+export const usePneu = (id: UUID | undefined) => useEntity("pneus", id);
+export const useSavePneu = () => useUpsert("pneus");
+export const useRemovePneu = () => useRemove("pneus");
+
+export const useLancamentos = () => useTenantList("lancamentos");
+export const useLancamento = (id: UUID | undefined) => useEntity("lancamentos", id);
+export const useSaveLancamento = () => useUpsert("lancamentos");
+export const useRemoveLancamento = () => useRemove("lancamentos");
+
 export function nextViagemNumero(transportadora_id: UUID): number {
   const ids = list("viagens")
     .filter((v) => v.transportadora_id === transportadora_id)
     .map((v) => v.numero_viagem || 0);
   return (ids.length ? Math.max(...ids) : 0) + 1;
+}
+
+/** Instala um pneu em posição do veículo; libera pneu anterior na mesma posição. */
+export function instalarPneu(
+  pneuId: UUID,
+  veiculoId: UUID,
+  posicao: PosicaoPneu,
+  hodometro?: number,
+): Pneu {
+  const pneu = get("pneus", pneuId);
+  if (!pneu) throw new Error("Pneu não encontrado");
+
+  const ocupando = list("pneus").find(
+    (p) => p.veiculo_id === veiculoId && p.posicao === posicao && p.id !== pneuId,
+  );
+  if (ocupando) {
+    upsert("pneus", {
+      ...ocupando,
+      veiculo_id: undefined,
+      posicao: undefined,
+      status: "estoque",
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  if (pneu.veiculo_id && pneu.posicao) {
+    const antigaPos = pneu.posicao;
+    const antigoVeiculo = pneu.veiculo_id;
+    if (antigoVeiculo !== veiculoId || antigaPos !== posicao) {
+      // pneu movido de outro lugar — posição antiga fica vazia
+    }
+  }
+
+  const now = new Date().toISOString();
+  return upsert("pneus", {
+    ...pneu,
+    veiculo_id: veiculoId,
+    posicao,
+    status: "instalado",
+    hodometro_instalacao: hodometro ?? pneu.hodometro_instalacao,
+    updated_at: now,
+  });
+}
+
+/** Remove pneu do veículo e devolve ao estoque. */
+export function desinstalarPneu(pneuId: UUID): Pneu {
+  const pneu = get("pneus", pneuId);
+  if (!pneu) throw new Error("Pneu não encontrado");
+  return upsert("pneus", {
+    ...pneu,
+    veiculo_id: undefined,
+    posicao: undefined,
+    status: "estoque",
+    updated_at: new Date().toISOString(),
+  });
+}
+
+export function pneusDoVeiculo(veiculoId: UUID): Pneu[] {
+  return list("pneus").filter((p) => p.veiculo_id === veiculoId && p.status === "instalado");
+}
+
+export function pneusEmEstoque(transportadoraId: UUID): Pneu[] {
+  return list("pneus").filter(
+    (p) => p.transportadora_id === transportadoraId && p.status === "estoque",
+  );
+}
+
+export function useInstalarPneu() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      pneuId,
+      veiculoId,
+      posicao,
+      hodometro,
+    }: {
+      pneuId: UUID;
+      veiculoId: UUID;
+      posicao: PosicaoPneu;
+      hodometro?: number;
+    }) => instalarPneu(pneuId, veiculoId, posicao, hodometro),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pneus"] }),
+  });
+}
+
+export function useDesinstalarPneu() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (pneuId: UUID) => desinstalarPneu(pneuId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pneus"] }),
+  });
 }

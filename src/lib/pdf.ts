@@ -19,9 +19,13 @@ import type {
   Veiculo,
   Cliente,
   ProdutoCarga,
+  Pneu,
 } from "@/types";
-import { STATUS_VIAGEM } from "@/types";
+import { STATUS_VIAGEM, POSICOES_PNEU } from "@/types";
 import { formatPlaca } from "./masks";
+import { posicoesAtivasVeiculo, layoutVisualVeiculo } from "./veiculo-pneus-perfil";
+import { buildMapaVistaSuperiorPdf } from "./mapa-pneus-pdf";
+import type { PosicaoPneu } from "@/types";
 
 // vfs_fonts pode exportar como default OU como { pdfMake: { vfs } } dependendo da versão.
 type VfsExport = {
@@ -287,4 +291,176 @@ export async function gerarPdfViagem(args: Args) {
   };
 
   pdfMake.createPdf(docDefinition).download(`viagem-${String(viagem.numero_viagem).padStart(5, "0")}.pdf`);
+}
+
+interface ArgsVeiculoPneus {
+  veiculo: Veiculo;
+  transportadora: Transportadora;
+  pneusInstalados: Pneu[];
+}
+
+export async function gerarPdfVeiculoPneus({ veiculo, transportadora, pneusInstalados }: ArgsVeiculoPneus) {
+  const placaFmt = formatPlaca(veiculo.placa);
+  const { perfil, faixas } = layoutVisualVeiculo(veiculo);
+  const porPosicao = Object.fromEntries(
+    pneusInstalados.filter((p) => p.posicao).map((p) => [p.posicao!, p]),
+  ) as Partial<Record<PosicaoPneu, Pneu>>;
+
+  const posicoes = posicoesAtivasVeiculo(veiculo);
+
+  const detalheBody: TableCell[][] = [
+    [
+      { text: "Posição", style: "th" },
+      { text: "Cód. fogo", style: "th" },
+      { text: "Marca / Modelo", style: "th" },
+      { text: "Medida", style: "th" },
+      { text: "Sulco", style: "th" },
+      { text: "DOT", style: "th" },
+      { text: "Hodôm. inst.", style: "th" },
+    ],
+    ...posicoes.map((pos) => {
+      const p = porPosicao[pos];
+      const label = POSICOES_PNEU.find((x) => x.value === pos)?.label ?? pos;
+      return [
+        label,
+        p?.codigo_fogo ?? "—",
+        p ? [p.marca, p.modelo].filter(Boolean).join(" ") || "—" : "—",
+        p?.medida ?? "—",
+        p?.sulco_atual_mm != null ? `${p.sulco_atual_mm} mm` : "—",
+        p?.dot ?? "—",
+        p?.hodometro_instalacao != null ? `${p.hodometro_instalacao} km` : "—",
+      ];
+    }),
+  ];
+
+  const instalados = pneusInstalados.length;
+  const vazias = posicoes.length - instalados;
+
+  const cabecalho: Content = {
+    columns: [
+      {
+        width: 60,
+        text: transportadora.nome_fantasia?.[0]?.toUpperCase() ?? "T",
+        alignment: "center",
+        fontSize: 28,
+        bold: true,
+        color: "#1e293b",
+        margin: [0, 6, 0, 0],
+      },
+      {
+        width: "*",
+        stack: [
+          { text: transportadora.nome_fantasia, style: "h1" },
+          { text: transportadora.razao_social, style: "muted" },
+          {
+            text: [
+              transportadora.cnpj ? `CNPJ: ${transportadora.cnpj}  ` : "",
+              transportadora.rntrc ? `RNTRC: ${transportadora.rntrc}` : "",
+            ].join(""),
+            style: "muted",
+          },
+        ],
+      },
+      {
+        width: 180,
+        stack: [
+          { text: "Mapa de Pneus", alignment: "right", bold: true },
+          { text: placaFmt, alignment: "right", fontSize: 16, bold: true, color: "#0f172a" },
+          { text: veiculo.tipo_veiculo, alignment: "right", style: "muted" },
+          { text: perfil.titulo, alignment: "right", style: "muted" },
+          { text: `Emitido em ${new Date().toLocaleString("pt-BR")}`, alignment: "right", style: "muted" },
+        ],
+      },
+    ],
+  };
+
+  const docDefinition: TDocumentDefinitions = {
+    pageSize: "A4",
+    pageMargins: [32, 32, 32, 60],
+    info: {
+      title: `Pneus ${placaFmt} - ${transportadora.nome_fantasia}`,
+      author: transportadora.nome_fantasia,
+    },
+    content: [
+      cabecalho,
+      { canvas: [{ type: "line", x1: 0, y1: 8, x2: 531, y2: 8, lineWidth: 1, lineColor: "#cbd5e1" }] },
+
+      sectionTitle("Identificação do veículo"),
+      kv([
+        ["Placa", placaFmt],
+        ["Tipo", veiculo.tipo_veiculo],
+        ["Marca / Modelo", [veiculo.marca, veiculo.modelo].filter(Boolean).join(" ") || undefined],
+        ["RENAVAM", veiculo.renavam],
+        ["Chassi", veiculo.chassi],
+        ["Nº eixos", veiculo.numero_eixos ?? perfil.eixosPadrao],
+        ["Configuração", perfil.titulo],
+        ["Hodômetro", veiculo.hodometro_atual != null ? `${veiculo.hodometro_atual} km` : undefined],
+        ["Status", veiculo.status],
+      ]),
+
+      sectionTitle("Resumo"),
+      kv([
+        ["Posições configuradas", posicoes.length],
+        ["Pneus instalados", instalados],
+        ["Posições vazias", vazias],
+      ]),
+
+      sectionTitle("Mapa de posições (vista superior)"),
+      { text: `${perfil.descricao} · ● instalado   ○ vazio`, style: "muted", margin: [0, 0, 0, 6] },
+      {
+        stack: buildMapaVistaSuperiorPdf(faixas, porPosicao),
+        margin: [0, 4, 0, 8],
+      },
+
+      sectionTitle("Detalhamento por posição"),
+      {
+        table: { widths: [70, 55, "*", 55, 40, 45, 55], body: detalheBody },
+        layout: {
+          fillColor: (row) => (row === 0 ? "#f1f5f9" : null),
+          hLineColor: "#e2e8f0",
+          vLineColor: "#e2e8f0",
+        },
+      },
+
+      ...(instalados > 0
+        ? [
+            sectionTitle("Lista de pneus instalados"),
+            {
+              ul: pneusInstalados.map((p) => {
+                const pos = POSICOES_PNEU.find((x) => x.value === p.posicao)?.label ?? p.posicao;
+                return `${pos}: ${p.codigo_fogo} — ${p.marca} ${p.medida}${p.sulco_atual_mm != null ? ` (sulco ${p.sulco_atual_mm} mm)` : ""}`;
+              }),
+              style: "small",
+            } as Content,
+          ]
+        : [{ text: "Nenhum pneu instalado neste veículo.", italics: true, color: "#94a3b8", margin: [0, 4, 0, 0] }]),
+
+      {
+        margin: [0, 40, 0, 0],
+        columns: [
+          { stack: [{ canvas: [{ type: "line", x1: 0, y1: 0, x2: 200, y2: 0, lineWidth: 0.5 }] }, { text: "Responsável frota", style: "small", alignment: "center", margin: [0, 4, 0, 0] }] },
+          { stack: [{ canvas: [{ type: "line", x1: 0, y1: 0, x2: 200, y2: 0, lineWidth: 0.5 }] }, { text: "Transportadora", style: "small", alignment: "center", margin: [0, 4, 0, 0] }] },
+        ],
+        columnGap: 40,
+      },
+    ],
+    footer: (currentPage, pageCount) => ({
+      columns: [
+        { text: `${transportadora.nome_fantasia} — ${placaFmt}`, style: "small", alignment: "left", margin: [32, 20, 0, 0] },
+        { text: `Página ${currentPage} de ${pageCount}`, style: "small", alignment: "right", margin: [0, 20, 32, 0] },
+      ],
+    }),
+    styles: {
+      h1: { fontSize: 16, bold: true, color: "#0f172a" },
+      section: { fontSize: 11, bold: true, color: "#0f172a", decoration: "underline", decorationColor: "#cbd5e1" },
+      muted: { fontSize: 8, color: "#64748b" },
+      small: { fontSize: 8, color: "#334155" },
+      k: { fontSize: 9, color: "#64748b", margin: [0, 1, 0, 1] },
+      v: { fontSize: 9, color: "#0f172a", margin: [0, 1, 0, 1] },
+      th: { fontSize: 9, bold: true, color: "#0f172a" },
+    } as StyleDictionary,
+    defaultStyle: { font: "Roboto", fontSize: 10 },
+  };
+
+  pdfMake.createPdf(docDefinition).download(`pneus-${placaFmt.replace(/-/g, "")}.pdf`);
 }

@@ -13,7 +13,10 @@ import { Route as ViagensRouteImport } from './routes/viagens'
 import { Route as VeiculosRouteImport } from './routes/veiculos'
 import { Route as TransportadoraRouteImport } from './routes/transportadora'
 import { Route as ProdutosRouteImport } from './routes/produtos'
+import { Route as PneusRouteImport } from './routes/pneus'
 import { Route as MotoristasRouteImport } from './routes/motoristas'
+import { Route as FornecedoresRouteImport } from './routes/fornecedores'
+import { Route as FinanceiroRouteImport } from './routes/financeiro'
 import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ViagensIdRouteImport } from './routes/viagens.$id'
@@ -38,9 +41,24 @@ const ProdutosRoute = ProdutosRouteImport.update({
   path: '/produtos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PneusRoute = PneusRouteImport.update({
+  id: '/pneus',
+  path: '/pneus',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MotoristasRoute = MotoristasRouteImport.update({
   id: '/motoristas',
   path: '/motoristas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FornecedoresRoute = FornecedoresRouteImport.update({
+  id: '/fornecedores',
+  path: '/fornecedores',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinanceiroRoute = FinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClientesRoute = ClientesRouteImport.update({
@@ -62,7 +80,10 @@ const ViagensIdRoute = ViagensIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/clientes': typeof ClientesRoute
+  '/financeiro': typeof FinanceiroRoute
+  '/fornecedores': typeof FornecedoresRoute
   '/motoristas': typeof MotoristasRoute
+  '/pneus': typeof PneusRoute
   '/produtos': typeof ProdutosRoute
   '/transportadora': typeof TransportadoraRoute
   '/veiculos': typeof VeiculosRoute
@@ -72,7 +93,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/clientes': typeof ClientesRoute
+  '/financeiro': typeof FinanceiroRoute
+  '/fornecedores': typeof FornecedoresRoute
   '/motoristas': typeof MotoristasRoute
+  '/pneus': typeof PneusRoute
   '/produtos': typeof ProdutosRoute
   '/transportadora': typeof TransportadoraRoute
   '/veiculos': typeof VeiculosRoute
@@ -83,7 +107,10 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/clientes': typeof ClientesRoute
+  '/financeiro': typeof FinanceiroRoute
+  '/fornecedores': typeof FornecedoresRoute
   '/motoristas': typeof MotoristasRoute
+  '/pneus': typeof PneusRoute
   '/produtos': typeof ProdutosRoute
   '/transportadora': typeof TransportadoraRoute
   '/veiculos': typeof VeiculosRoute
@@ -95,7 +122,10 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/clientes'
+    | '/financeiro'
+    | '/fornecedores'
     | '/motoristas'
+    | '/pneus'
     | '/produtos'
     | '/transportadora'
     | '/veiculos'
@@ -105,7 +135,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/clientes'
+    | '/financeiro'
+    | '/fornecedores'
     | '/motoristas'
+    | '/pneus'
     | '/produtos'
     | '/transportadora'
     | '/veiculos'
@@ -115,7 +148,10 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/clientes'
+    | '/financeiro'
+    | '/fornecedores'
     | '/motoristas'
+    | '/pneus'
     | '/produtos'
     | '/transportadora'
     | '/veiculos'
@@ -126,7 +162,10 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ClientesRoute: typeof ClientesRoute
+  FinanceiroRoute: typeof FinanceiroRoute
+  FornecedoresRoute: typeof FornecedoresRoute
   MotoristasRoute: typeof MotoristasRoute
+  PneusRoute: typeof PneusRoute
   ProdutosRoute: typeof ProdutosRoute
   TransportadoraRoute: typeof TransportadoraRoute
   VeiculosRoute: typeof VeiculosRoute
@@ -163,11 +202,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProdutosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pneus': {
+      id: '/pneus'
+      path: '/pneus'
+      fullPath: '/pneus'
+      preLoaderRoute: typeof PneusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/motoristas': {
       id: '/motoristas'
       path: '/motoristas'
       fullPath: '/motoristas'
       preLoaderRoute: typeof MotoristasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fornecedores': {
+      id: '/fornecedores'
+      path: '/fornecedores'
+      fullPath: '/fornecedores'
+      preLoaderRoute: typeof FornecedoresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/financeiro': {
+      id: '/financeiro'
+      path: '/financeiro'
+      fullPath: '/financeiro'
+      preLoaderRoute: typeof FinanceiroRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/clientes': {
@@ -208,7 +268,10 @@ const ViagensRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ClientesRoute: ClientesRoute,
+  FinanceiroRoute: FinanceiroRoute,
+  FornecedoresRoute: FornecedoresRoute,
   MotoristasRoute: MotoristasRoute,
+  PneusRoute: PneusRoute,
   ProdutosRoute: ProdutosRoute,
   TransportadoraRoute: TransportadoraRoute,
   VeiculosRoute: VeiculosRoute,
@@ -217,3 +280,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

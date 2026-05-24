@@ -32,7 +32,15 @@ A camada de dados (`src/data/store.ts`) expõe hooks com a mesma assinatura que 
 5. (Opcional) Mover endereço/documentos da viagem para tabelas relacionadas (`viagem_documentos`) — os tipos já preveem isso
 
 ## Próximas fases
-- **Fase 2**: PWA do motorista + rastreamento realtime (Supabase Realtime + Leaflet)
-- **Fase 3**: Offline-first com IndexedDB + service worker + fila de sincronização
-- **Fase 4**: Pneus (estoque, fornecedores, drag-and-drop visual de instalação) + financeiro detalhado
+- **Fase 2** (entregue): Pneus (estoque, fornecedores, drag-and-drop visual de instalação) + financeiro detalhado
+- **Fase 3**: PWA do motorista + rastreamento realtime (Supabase Realtime + Leaflet)
+- **Fase 4**: Offline-first com IndexedDB + service worker + fila de sincronização
 - **Fase 5**: Autenticação (Supabase Auth + roles via `user_roles`)
+
+## Fase 2 — o que foi adicionado
+- `src/types/` — `Fornecedor`, `Pneu`, `LancamentoFinanceiro`, posições de pneu
+- `src/data/store.ts` — hooks `useFornecedores`, `usePneus`, `useLancamentos`, `useInstalarPneu`, `useDesinstalarPneu`
+- `src/lib/veiculo-pneus-perfil.ts` — perfis de vista superior por tipo (toco, truck, bitruck, cavalo, implementos, vanderleia)
+- `src/components/TireLayout.tsx` — layout visual dinâmico conforme o tipo do veículo
+- Rotas: `/fornecedores`, `/pneus` (estoque + instalação), `/financeiro` (resumo + lançamentos)
+- PDF de mapa de pneus por veículo em `/veiculos` (ícone de documento na listagem ou botão no modal)

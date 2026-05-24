@@ -1,6 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { useVeiculos, useSaveVeiculo, useRemoveVeiculo, useActiveTenantId } from "@/data/store";
+import {
+  useVeiculos,
+  useSaveVeiculo,
+  useRemoveVeiculo,
+  useActiveTenantId,
+  usePneus,
+  useTransportadora,
+} from "@/data/store";
 import type { Veiculo, StatusVeiculo } from "@/types";
 import { TIPOS_VEICULO } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -17,9 +24,11 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, FileText } from "lucide-react";
 import { DocumentUploader } from "@/components/DocumentUploader";
 import { formatPlaca, maskPlaca } from "@/lib/masks";
+import { gerarPdfVeiculoPneus } from "@/lib/pdf";
+import { eixosPadraoPorTipo } from "@/lib/veiculo-pneus-perfil";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/veiculos")({
@@ -37,13 +46,15 @@ const STATUS: { value: StatusVeiculo; label: string }[] = [
 
 function empty(tenantId: string): Veiculo {
   const now = new Date().toISOString();
+  const tipo = "Cavalo mecânico";
   return {
     id: crypto.randomUUID(),
     transportadora_id: tenantId,
-    tipo_veiculo: "Cavalo mecânico",
+    tipo_veiculo: tipo,
     placa: "",
     renavam: "",
     chassi: "",
+    numero_eixos: eixosPadraoPorTipo(tipo),
     status: "disponivel",
     documentos: [],
     created_at: now,
@@ -54,10 +65,30 @@ function empty(tenantId: string): Veiculo {
 function Page() {
   const tenantId = useActiveTenantId();
   const { data: veiculos = [] } = useVeiculos();
+  const { data: pneus = [] } = usePneus();
+  const { data: transportadora } = useTransportadora(tenantId);
   const save = useSaveVeiculo();
   const remove = useRemoveVeiculo();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<Veiculo | null>(null);
+
+  const pneusDoVeiculo = (veiculoId: string) =>
+    pneus.filter((p) => p.veiculo_id === veiculoId && p.status === "instalado");
+
+  const handlePdf = async (veiculo: Veiculo) => {
+    if (!transportadora) return toast.error("Configure a transportadora primeiro");
+    try {
+      await gerarPdfVeiculoPneus({
+        veiculo,
+        transportadora,
+        pneusInstalados: pneusDoVeiculo(veiculo.id),
+      });
+      toast.success("PDF gerado");
+    } catch (e) {
+      console.error(e);
+      toast.error("Falha ao gerar PDF");
+    }
+  };
 
   const salvar = () => {
     if (!form) return;
@@ -83,25 +114,42 @@ function Page() {
         <Table>
           <TableHeader><TableRow>
             <TableHead>Placa</TableHead><TableHead>Tipo</TableHead><TableHead>Marca/Modelo</TableHead>
-            <TableHead>RENAVAM</TableHead><TableHead>Status</TableHead><TableHead className="w-[120px]"></TableHead>
+            <TableHead>RENAVAM</TableHead><TableHead>Pneus</TableHead><TableHead>Status</TableHead><TableHead className="w-[150px]"></TableHead>
           </TableRow></TableHeader>
           <TableBody>
             {veiculos.length === 0 && (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum veículo cadastrado.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum veículo cadastrado.</TableCell></TableRow>
             )}
-            {veiculos.map((v) => (
-              <TableRow key={v.id}>
-                <TableCell className="font-medium">{formatPlaca(v.placa)}</TableCell>
-                <TableCell>{v.tipo_veiculo}</TableCell>
-                <TableCell>{[v.marca, v.modelo].filter(Boolean).join(" ")}</TableCell>
-                <TableCell>{v.renavam}</TableCell>
-                <TableCell><Badge variant="secondary">{v.status}</Badge></TableCell>
-                <TableCell><div className="flex gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => { setForm(v); setOpen(true); }}><Pencil className="h-3 w-3" /></Button>
-                  <Button size="sm" variant="ghost" onClick={() => { if (confirm("Remover veículo?")) remove.mutate(v.id); }}><Trash2 className="h-3 w-3 text-destructive" /></Button>
-                </div></TableCell>
-              </TableRow>
-            ))}
+            {veiculos.map((v) => {
+              const qtdPneus = pneusDoVeiculo(v.id).length;
+              return (
+                <TableRow key={v.id}>
+                  <TableCell className="font-medium">{formatPlaca(v.placa)}</TableCell>
+                  <TableCell>{v.tipo_veiculo}</TableCell>
+                  <TableCell>{[v.marca, v.modelo].filter(Boolean).join(" ")}</TableCell>
+                  <TableCell>{v.renavam}</TableCell>
+                  <TableCell>
+                    <Badge variant={qtdPneus > 0 ? "default" : "outline"}>
+                      {qtdPneus} instalado{qtdPneus !== 1 ? "s" : ""}
+                    </Badge>
+                  </TableCell>
+                  <TableCell><Badge variant="secondary">{v.status}</Badge></TableCell>
+                  <TableCell>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="ghost" title="Gerar PDF de pneus" onClick={() => handlePdf(v)}>
+                        <FileText className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setForm(v); setOpen(true); }}>
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => { if (confirm("Remover veículo?")) remove.mutate(v.id); }}>
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
@@ -119,7 +167,11 @@ function Page() {
               <TabsContent value="dados" className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 <div>
                   <Label>Tipo</Label>
-                  <Select value={form.tipo_veiculo} onValueChange={(v) => setForm({ ...form, tipo_veiculo: v })}>
+                  <Select value={form.tipo_veiculo} onValueChange={(v) => setForm({
+                    ...form,
+                    tipo_veiculo: v,
+                    numero_eixos: eixosPadraoPorTipo(v),
+                  })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>{TIPOS_VEICULO.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                   </Select>
@@ -160,6 +212,11 @@ function Page() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            {form?.placa && (
+              <Button variant="secondary" onClick={() => handlePdf(form)}>
+                <FileText className="h-4 w-4 mr-2" /> PDF pneus
+              </Button>
+            )}
             <Button onClick={salvar}>Salvar</Button>
           </DialogFooter>
         </DialogContent>
