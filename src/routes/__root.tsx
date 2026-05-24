@@ -108,12 +108,31 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/layout/AppSidebar";
+import { TenantSwitcher } from "@/components/layout/TenantSwitcher";
+import { Toaster } from "@/components/ui/sonner";
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full bg-background">
+          <AppSidebar />
+          <div className="flex-1 flex flex-col min-w-0">
+            <header className="h-14 border-b flex items-center justify-between px-4 gap-4">
+              <SidebarTrigger />
+              <TenantSwitcher />
+            </header>
+            <main className="flex-1 p-6 overflow-auto">
+              <Outlet />
+            </main>
+          </div>
+        </div>
+        <Toaster />
+      </SidebarProvider>
     </QueryClientProvider>
   );
 }
