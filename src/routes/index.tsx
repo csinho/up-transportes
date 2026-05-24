@@ -6,7 +6,10 @@ import {
   useMotoristas,
   useVeiculos,
   useViagens,
+  useAllViagemOcorrencias,
 } from "@/data/store";
+import { calcularAlertasOperacionais, viagemEstaAtrasada } from "@/lib/dashboard-alertas";
+import { DashboardAlertasPanel } from "@/components/dashboard/DashboardAlertasPanel";
 import {
   Route as RouteIcon,
   AlertTriangle,
@@ -16,7 +19,6 @@ import {
   Clock,
   CalendarClock,
 } from "lucide-react";
-import { isPast, parseISO } from "date-fns";
 import { STATUS_VIAGEM } from "@/types";
 import { useListControls } from "@/hooks/use-list-controls";
 import { ListToolbar } from "@/components/list/ListToolbar";
@@ -45,24 +47,17 @@ const STATUS_ATIVOS = [
 
 const STATUS_FINAL = ["finalizada", "cancelada"] as const;
 
-function isAtrasada(v: { data_prevista_chegada?: string; status: string }) {
-  if (!v.data_prevista_chegada) return false;
-  if (STATUS_FINAL.includes(v.status as (typeof STATUS_FINAL)[number])) return false;
-  try {
-    return isPast(parseISO(v.data_prevista_chegada));
-  } catch {
-    return false;
-  }
-}
-
 function Dashboard() {
   const { data: motoristas = [] } = useMotoristas();
   const { data: veiculos = [] } = useVeiculos();
   const { data: viagens = [] } = useViagens();
+  const { data: ocorrencias = [] } = useAllViagemOcorrencias();
+
+  const alertas = calcularAlertasOperacionais(viagens, ocorrencias);
 
   const emAndamento = viagens.filter((v) => STATUS_ATIVOS.includes(v.status as (typeof STATUS_ATIVOS)[number]));
   const planejadas = viagens.filter((v) => v.status === "planejada");
-  const atrasadas = viagens.filter(isAtrasada);
+  const atrasadas = viagens.filter(viagemEstaAtrasada);
   const comOcorrencia = viagens.filter((v) => v.status === "com_ocorrencia");
   const docsPendentes = viagens.filter(
     (v) =>
@@ -94,12 +89,17 @@ function Dashboard() {
             Acompanhe viagens, motoristas e pendências da operação.
           </p>
         </div>
-        <Button asChild>
-          <Link to="/viagens">
-            <RouteIcon className="h-4 w-4 mr-2" />
-            Gerenciar viagens
-          </Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" asChild>
+            <Link to="/auditoria">Ver auditoria</Link>
+          </Button>
+          <Button asChild>
+            <Link to="/viagens">
+              <RouteIcon className="h-4 w-4 mr-2" />
+              Gerenciar viagens
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -110,6 +110,8 @@ function Dashboard() {
         <StatCard icon={AlertTriangle} label="Ocorrências" value={comOcorrencia.length} alert={comOcorrencia.length > 0} />
         <StatCard icon={FileWarning} label="Docs pendentes" value={docsPendentes.length} alert={docsPendentes.length > 0} />
       </div>
+
+      <DashboardAlertasPanel alertas={alertas} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
@@ -164,12 +166,10 @@ function Dashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-500" />
-              Alertas operacionais
-            </CardTitle>
+            <CardTitle>Resumo operacional</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
+            <AlertRow label="Alertas ativos" value={alertas.length} />
             <AlertRow label="Viagens atrasadas" value={atrasadas.length} />
             <AlertRow label="Viagens com ocorrência" value={comOcorrencia.length} />
             <AlertRow label="Documentos pendentes em viagens ativas" value={docsPendentes.length} />
@@ -181,20 +181,22 @@ function Dashboard() {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <MapPin className="h-4 w-4" />
-            Últimas localizações
+            Rastreamento
           </CardTitle>
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/rastreamento">Abrir mapa</Link>
+          </Button>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            O rastreamento em tempo real será exibido aqui após a integração com Supabase Realtime,
-            Geolocation API e mapa Leaflet na rota <Link to="/rastreamento" className="underline">/rastreamento</Link>.
-          </p>
-          <p className="text-xs text-muted-foreground mt-2">
-            * Motoristas &quot;online&quot; hoje refletem status <code className="text-xs">em_viagem</code> no cadastro.
-            Com o PWA do motorista, o status virá da sincronização de localização.
+            Acompanhe posições em tempo real na rota{" "}
+            <Link to="/rastreamento" className="underline">
+              /rastreamento
+            </Link>
+            . Alterações feitas pelo motorista no app aparecem automaticamente.
           </p>
         </CardContent>
       </Card>

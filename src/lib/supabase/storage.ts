@@ -49,3 +49,25 @@ export async function removeDocumento(path: string): Promise<void> {
   const { error } = await supabase.storage.from(BUCKET).remove([path]);
   if (error) lancarErroSupabase(error, "Falha ao remover arquivo");
 }
+
+/** Logo da transportadora — substitui arquivo anterior. */
+export async function uploadTransportadoraLogo(input: {
+  transportadoraId: string;
+  entidadeId: string;
+  file: File;
+}): Promise<{ path: string }> {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase não configurado");
+
+  const ext = input.file.name.split(".").pop()?.toLowerCase() || "png";
+  const path = `${input.transportadoraId}/transportadoras/${input.entidadeId}/logo.${ext}`;
+
+  const { error } = await supabase.storage.from(BUCKET).upload(path, input.file, {
+    cacheControl: "3600",
+    upsert: true,
+    contentType: input.file.type || undefined,
+  });
+
+  if (error) lancarErroSupabase(error, "Falha ao enviar logo");
+  return { path };
+}

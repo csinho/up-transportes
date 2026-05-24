@@ -34,6 +34,7 @@ import { ViagemOcorrenciasPanel } from "@/components/viagem/ViagemOcorrenciasPan
 import { ViagemLocalizacoesPanel } from "@/components/viagem/ViagemLocalizacoesPanel";
 import { ViagemRastreamentoMap } from "@/components/rastreamento/ViagemRastreamentoMap";
 import { ViagemProgressoCard } from "@/components/viagem/ViagemProgressoCard";
+import { ViagemAcessoClientePanel } from "@/components/viagem/ViagemAcessoClientePanel";
 import { montarDadosMapaViagem } from "@/lib/rastreamento-mapa";
 import { isViagemRastreavel } from "@/lib/viagem-rastreamento";
 import { FinalizarViagemDialog } from "@/components/viagem/FinalizarViagemDialog";
@@ -194,6 +195,7 @@ function Page() {
           {progresso.emAndamento || form.status === "finalizada" || form.status === "planejada" ? (
             <ViagemProgressoCard progresso={progresso} />
           ) : null}
+          <ViagemAcessoClientePanel viagemId={form.id} numeroViagem={form.numero_viagem} />
           {form.status === "finalizada" && form.finalizacao_em && (
             <Card>
               <CardHeader><CardTitle className="text-base">Finalização</CardTitle></CardHeader>

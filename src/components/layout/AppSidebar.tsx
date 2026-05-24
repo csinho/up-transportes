@@ -8,6 +8,7 @@ import {
   Package,
   Route as RouteIcon,
   MapPin,
+  History,
 } from "lucide-react";
 import {
   Sidebar,
@@ -20,11 +21,13 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useErpPermissions } from "@/hooks/use-erp-permissions";
 
 const operacao = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Viagens", url: "/viagens", icon: RouteIcon },
   { title: "Rastreamento", url: "/rastreamento", icon: MapPin },
+  { title: "Auditoria", url: "/auditoria", icon: History, ownerOnly: true },
 ];
 
 const cadastros = [
@@ -34,19 +37,18 @@ const cadastros = [
   { title: "Produtos / Cargas", url: "/produtos", icon: Package },
 ];
 
-const config = [
-  { title: "Transportadora", url: "/transportadora", icon: Building2 },
-];
+const config = [{ title: "Transportadora", url: "/transportadora", icon: Building2, ownerOnly: true }];
 
-function NavGroup({
-  label,
-  items,
-  path,
-}: {
-  label: string;
-  items: typeof operacao;
-  path: string;
-}) {
+type NavItem = {
+  title: string;
+  url: string;
+  icon: React.ComponentType<{ className?: string }>;
+  ownerOnly?: boolean;
+};
+
+function NavGroup({ label, items, path }: { label: string; items: NavItem[]; path: string }) {
+  if (items.length === 0) return null;
+
   return (
     <SidebarGroup>
       <SidebarGroupLabel>{label}</SidebarGroupLabel>
@@ -56,10 +58,7 @@ function NavGroup({
             <SidebarMenuItem key={item.url}>
               <SidebarMenuButton
                 asChild
-                isActive={
-                  path === item.url ||
-                  (item.url !== "/" && path.startsWith(item.url))
-                }
+                isActive={path === item.url || (item.url !== "/" && path.startsWith(item.url))}
               >
                 <Link to={item.url}>
                   <item.icon className="h-4 w-4" />
@@ -76,6 +75,10 @@ function NavGroup({
 
 export function AppSidebar() {
   const path = useRouterState({ select: (r) => r.location.pathname });
+  const { canAccessAuditoria, canAccessTransportadoraConfig } = useErpPermissions();
+
+  const operacaoFiltrada = operacao.filter((i) => !i.ownerOnly || canAccessAuditoria);
+  const configFiltrada = config.filter((i) => !i.ownerOnly || canAccessTransportadoraConfig);
 
   return (
     <Sidebar collapsible="icon">
@@ -91,9 +94,9 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <NavGroup label="Operação" items={operacao} path={path} />
+        <NavGroup label="Operação" items={operacaoFiltrada} path={path} />
         <NavGroup label="Cadastros de apoio" items={cadastros} path={path} />
-        <NavGroup label="Configurações" items={config} path={path} />
+        <NavGroup label="Configurações" items={configFiltrada} path={path} />
       </SidebarContent>
     </Sidebar>
   );

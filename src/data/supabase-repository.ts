@@ -40,7 +40,26 @@ function client() {
 }
 
 export async function sbListTransportadoras(): Promise<Transportadora[]> {
-  const { data, error } = await client().from("transportadoras").select("*").order("nome_fantasia");
+  const supabase = client();
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData.user?.id;
+  if (!userId) return [];
+
+  const { data: links, error: linkErr } = await supabase
+    .from("user_transportadoras")
+    .select("transportadora_id")
+    .eq("user_id", userId);
+  if (linkErr) lancarErroSupabase(linkErr);
+
+  const ids = (links ?? []).map((l) => l.transportadora_id);
+  if (ids.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("transportadoras")
+    .select("*")
+    .in("id", ids)
+    .eq("ativa", true)
+    .order("nome_fantasia");
   if (error) lancarErroSupabase(error);
   return (data ?? []).map(transportadoraFromRow);
 }

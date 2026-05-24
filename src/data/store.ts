@@ -353,6 +353,36 @@ export const useAllViagemLocalizacoes = (options?: ViagemSubListOptions) => {
   });
 };
 
+export const useAllViagemEventos = () => {
+  const tenant = useActiveTenantId();
+  return useQuery({
+    queryKey: ["viagem_eventos", tenant, "all"],
+    enabled: !!tenant,
+    queryFn: async () => {
+      await assertDataAccess();
+      const rows = await sb.sbListViagemEventos(tenant);
+      return rows.sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+    },
+  });
+};
+
+export const useAllViagemOcorrencias = () => {
+  const tenant = useActiveTenantId();
+  return useQuery({
+    queryKey: ["viagem_ocorrencias", tenant, "all"],
+    enabled: !!tenant,
+    queryFn: async () => {
+      await assertDataAccess();
+      const rows = await sb.sbListViagemOcorrencias(tenant);
+      return rows.sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+    },
+  });
+};
+
 export const useSaveViagemEvento = () => useUpsert("viagem_eventos");
 export const useSaveViagemOcorrencia = () => useUpsert("viagem_ocorrencias");
 export const useSaveViagemLocalizacao = () => useUpsert("viagem_localizacoes");

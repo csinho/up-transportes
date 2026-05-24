@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -13,7 +13,9 @@ const REALTIME_TABLES = [
   "viagem_localizacoes",
 ] as const;
 
-function invalidateOperacao(qc: ReturnType<typeof useQueryClient>) {
+const RECONNECT_MS = 5_000;
+
+export function invalidateOperacaoQueries(qc: ReturnType<typeof useQueryClient>) {
   const opts = { refetchType: "active" as const };
   void qc.invalidateQueries({ queryKey: ["viagens"], ...opts });
   void qc.invalidateQueries({ queryKey: ["viagem_eventos"], ...opts });
@@ -23,32 +25,40 @@ function invalidateOperacao(qc: ReturnType<typeof useQueryClient>) {
   void qc.invalidateQueries({ queryKey: ["veiculos"], ...opts });
 }
 
-function attachOperacaoListeners(
+function attachOperacaoChannel(
   supabase: NonNullable<ReturnType<typeof getSupabaseClient>>,
   tenant: string,
   userId: string,
   qc: ReturnType<typeof useQueryClient>,
+  onResubscribe: () => void,
 ): RealtimeChannel {
-  let channel = supabase.channel(`operacao:${tenant}:${userId}`);
+  let channel = supabase.channel(`operacao:${tenant}:${userId}:${Date.now()}`);
 
   for (const table of REALTIME_TABLES) {
     channel = channel.on(
       "postgres_changes",
-      { event: "*", schema: "public", table },
-      () => invalidateOperacao(qc),
+      {
+        event: "*",
+        schema: "public",
+        table,
+        filter: `transportadora_id=eq.${tenant}`,
+      },
+      () => invalidateOperacaoQueries(qc),
     );
   }
 
   channel.subscribe((status, err) => {
     if (status === "SUBSCRIBED") {
-      console.debug("[Realtime] Canal operação conectado.");
+      invalidateOperacaoQueries(qc);
       return;
     }
     if (status === "CHANNEL_ERROR") {
-      console.error("[Realtime] Erro no canal operação:", err);
+      console.error("[Realtime] Erro no canal:", err);
+      onResubscribe();
     }
-    if (status === "TIMED_OUT") {
-      console.warn("[Realtime] Canal operação expirou.");
+    if (status === "TIMED_OUT" || status === "CLOSED") {
+      console.warn("[Realtime] Canal desconectado — reconectando…");
+      onResubscribe();
     }
   });
 
@@ -56,13 +66,15 @@ function attachOperacaoListeners(
 }
 
 /**
- * Supabase Realtime — invalida React Query quando viagens/eventos/ocorrências/localizações mudam.
- * Aguarda sessão autenticada (ERP ou motorista anônimo) e reconecta ao renovar o token.
+ * Supabase Realtime — invalida React Query quando operação muda no banco.
+ * Reconecta ao perder conexão, ao voltar online ou ao focar a aba.
  */
 export function useOperacaoRealtime() {
   const qc = useQueryClient();
   const tenant = useActiveTenantId();
   const { session, loading } = useAuthSession();
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!isSupabaseConfigured() || !tenant || loading || !session) return;
@@ -70,20 +82,69 @@ export function useOperacaoRealtime() {
     const supabase = getSupabaseClient();
     if (!supabase) return;
 
-    let channel = attachOperacaoListeners(supabase, tenant, session.user.id, qc);
+    let cancelled = false;
+
+    const clearReconnect = () => {
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+    };
+
+    const teardown = () => {
+      clearReconnect();
+      if (channelRef.current) {
+        void supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+
+    const subscribe = () => {
+      if (cancelled) return;
+      teardown();
+      channelRef.current = attachOperacaoChannel(
+        supabase,
+        tenant,
+        session.user.id,
+        qc,
+        () => {
+          clearReconnect();
+          reconnectTimerRef.current = setTimeout(() => {
+            if (!cancelled) subscribe();
+          }, RECONNECT_MS);
+        },
+      );
+    };
+
+    subscribe();
 
     const {
-      data: { subscription },
+      data: { subscription: authSub },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      void supabase.removeChannel(channel);
-      if (nextSession) {
-        channel = attachOperacaoListeners(supabase, tenant, nextSession.user.id, qc);
-      }
+      if (cancelled || !nextSession) return;
+      subscribe();
     });
 
+    const onVisible = () => {
+      if (document.visibilityState === "visible") invalidateOperacaoQueries(qc);
+    };
+    const onOnline = () => {
+      subscribe();
+      invalidateOperacaoQueries(qc);
+    };
+    const onFocus = () => invalidateOperacaoQueries(qc);
+
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("focus", onFocus);
+
     return () => {
-      subscription.unsubscribe();
-      void supabase.removeChannel(channel);
+      cancelled = true;
+      authSub.unsubscribe();
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("focus", onFocus);
+      teardown();
     };
   }, [qc, tenant, session?.user.id, loading]);
 }

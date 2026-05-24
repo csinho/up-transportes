@@ -8,6 +8,9 @@ import type {
   ViagemEvento,
   ViagemOcorrencia,
   ViagemLocalizacao,
+  Endereco,
+  TipoTransportador,
+  DocumentoAnexo,
 } from "@/types";
 import type { Json } from "@/lib/supabase/database.types";
 
@@ -15,6 +18,22 @@ function omit<T extends Record<string, unknown>>(obj: T, keys: string[]): Record
   const out = { ...obj };
   for (const k of keys) delete out[k];
   return out;
+}
+
+const ENDERECO_VAZIO: Endereco = {
+  cep: "",
+  logradouro: "",
+  numero: "",
+  bairro: "",
+  cidade: "",
+  uf: "",
+  pais: "Brasil",
+};
+
+function normalizeTipoTransportador(value: unknown): TipoTransportador {
+  const raw = typeof value === "string" ? value.toUpperCase() : "";
+  if (raw === "TAC" || raw === "CTC") return raw;
+  return "ETC";
 }
 
 export function transportadoraToRow(t: Transportadora) {
@@ -43,13 +62,24 @@ export function transportadoraFromRow(row: {
   updated_at: string;
 }): Transportadora {
   const dados = (row.dados ?? {}) as Record<string, unknown>;
+  const enderecoRaw = dados.endereco as Partial<Endereco> | undefined;
+  const documentosRaw = dados.documentos;
+
+  const rest = omit(dados, ["endereco", "documentos", "tipo_transportador"]);
+
   return {
-    ...(dados as Omit<Transportadora, "id" | "nome_fantasia" | "razao_social" | "created_at" | "updated_at">),
+    ...(rest as Omit<
+      Transportadora,
+      "id" | "nome_fantasia" | "razao_social" | "created_at" | "updated_at" | "endereco" | "documentos" | "tipo_transportador"
+    >),
     id: row.id,
     nome_fantasia: row.nome_fantasia,
     razao_social: row.razao_social,
     created_at: row.created_at,
     updated_at: row.updated_at,
+    tipo_transportador: normalizeTipoTransportador(dados.tipo_transportador),
+    endereco: enderecoRaw ? { ...ENDERECO_VAZIO, ...enderecoRaw } : { ...ENDERECO_VAZIO },
+    documentos: Array.isArray(documentosRaw) ? (documentosRaw as DocumentoAnexo[]) : [],
   };
 }
 

@@ -34,7 +34,7 @@ function Page() {
   }
 
   return (
-    <MotoristaShell titulo="Início">
+    <MotoristaShell titulo="Início" transportadoraId={session.transportadoraId}>
       <div className="space-y-6">
         <MotoristaDashboardResumo resumo={resumo} motoristaNome={session.nome} />
 

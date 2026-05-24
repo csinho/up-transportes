@@ -13,6 +13,24 @@ export async function ensureDemoTenantLink(): Promise<void> {
   const supabase = getSupabaseClient();
   if (!supabase) return;
 
+  const { aceitarConvitesPendentes } = await import("@/lib/supabase/colaboradores");
+  await aceitarConvitesPendentes();
+
+  const { data: isAdmin } = await supabase.rpc("is_platform_admin");
+  if (isAdmin) {
+    const { data: tenants } = await supabase
+      .from("user_transportadoras")
+      .select("transportadora_id")
+      .limit(1);
+    if (tenants && tenants.length > 0) {
+      if (!getActiveTransportadoraId()) {
+        setActiveTransportadoraId(tenants[0].transportadora_id);
+      }
+      return;
+    }
+    return;
+  }
+
   const { data: existing, error: readErr } = await supabase
     .from("user_transportadoras")
     .select("transportadora_id")
@@ -42,5 +60,23 @@ export async function ensureDemoTenantLink(): Promise<void> {
 
   if (!getActiveTransportadoraId()) {
     setActiveTransportadoraId(DEMO_TRANSPORTADORA_ID);
+  }
+}
+
+/** Define tenant ativo após login se informado na URL e usuário tem acesso. */
+export async function applyLoginTenantPreference(tenantId?: string): Promise<void> {
+  if (!tenantId || !isSupabaseConfigured()) return;
+
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+
+  const { data, error } = await supabase
+    .from("user_transportadoras")
+    .select("transportadora_id")
+    .eq("transportadora_id", tenantId)
+    .maybeSingle();
+
+  if (!error && data) {
+    setActiveTransportadoraId(tenantId);
   }
 }

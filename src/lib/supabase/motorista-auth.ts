@@ -15,6 +15,20 @@ type LinkMotoristaRow = {
   nome: string;
 };
 
+/** Sessão anônima mínima para ler branding/logo antes do login por CPF. */
+export async function ensureMotoristaAnonymousSession(): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+
+  const { data } = await supabase.auth.getSession();
+  if (!data.session) {
+    const { error } = await supabase.auth.signInAnonymously();
+    if (error) lancarErroSupabase(error);
+  }
+}
+
 /** Login PWA: sessão anônima Supabase + vínculo por CPF (RPC). */
 export async function loginMotoristaPorCpf(cpf: string): Promise<MotoristaAuthResult> {
   if (!isSupabaseConfigured()) {

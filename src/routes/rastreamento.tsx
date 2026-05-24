@@ -101,7 +101,7 @@ function Page() {
           </p>
           <p className="text-xs text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5 mt-1">
             <Radio className="h-3.5 w-3.5" />
-            Atualização em tempo real via Supabase
+            Atualização em tempo real
           </p>
         </div>
         <Button variant="outline" asChild>

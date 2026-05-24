@@ -62,6 +62,25 @@ export async function signInWithEmail(email: string, password: string) {
   if (error) lancarErroSupabase(error);
 }
 
+/** Cadastro de colaborador convidado (primeiro acesso). */
+export async function signUpColaborador(email: string, password: string) {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase não configurado");
+
+  const { data, error } = await supabase.auth.signUp({
+    email: email.trim(),
+    password,
+  });
+  if (error) lancarErroSupabase(error);
+
+  return {
+    session: data.session,
+    user: data.user,
+    /** Supabase exige confirmação por e-mail antes do primeiro login. */
+    needsEmailConfirmation: !!data.user && !data.session,
+  };
+}
+
 export async function signOut() {
   const supabase = getSupabaseClient();
   if (!supabase) return;

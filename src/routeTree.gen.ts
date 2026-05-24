@@ -14,17 +14,26 @@ import { Route as VeiculosRouteImport } from './routes/veiculos'
 import { Route as TransportadoraRouteImport } from './routes/transportadora'
 import { Route as RastreamentoRouteImport } from './routes/rastreamento'
 import { Route as ProdutosRouteImport } from './routes/produtos'
+import { Route as PlataformaRouteImport } from './routes/plataforma'
 import { Route as MotoristasRouteImport } from './routes/motoristas'
 import { Route as MotoristaRouteImport } from './routes/motorista'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ClientesRouteImport } from './routes/clientes'
+import { Route as AuditoriaRouteImport } from './routes/auditoria'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ViagensIndexRouteImport } from './routes/viagens.index'
+import { Route as PlataformaIndexRouteImport } from './routes/plataforma.index'
 import { Route as MotoristaIndexRouteImport } from './routes/motorista.index'
 import { Route as ViagensIdRouteImport } from './routes/viagens.$id'
+import { Route as PlataformaTransportadorasRouteImport } from './routes/plataforma.transportadoras'
+import { Route as PlataformaLoginRouteImport } from './routes/plataforma.login'
 import { Route as MotoristaViagensRouteImport } from './routes/motorista.viagens'
 import { Route as MotoristaDashboardRouteImport } from './routes/motorista.dashboard'
+import { Route as AcompanharTokenRouteImport } from './routes/acompanhar.$token'
+import { Route as PlataformaTransportadorasIndexRouteImport } from './routes/plataforma.transportadoras.index'
 import { Route as MotoristaViagensIndexRouteImport } from './routes/motorista.viagens.index'
+import { Route as PlataformaTransportadorasNovaRouteImport } from './routes/plataforma.transportadoras.nova'
+import { Route as PlataformaTransportadorasIdRouteImport } from './routes/plataforma.transportadoras.$id'
 import { Route as MotoristaViagensIdRouteImport } from './routes/motorista.viagens.$id'
 
 const ViagensRoute = ViagensRouteImport.update({
@@ -52,6 +61,11 @@ const ProdutosRoute = ProdutosRouteImport.update({
   path: '/produtos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlataformaRoute = PlataformaRouteImport.update({
+  id: '/plataforma',
+  path: '/plataforma',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MotoristasRoute = MotoristasRouteImport.update({
   id: '/motoristas',
   path: '/motoristas',
@@ -72,6 +86,11 @@ const ClientesRoute = ClientesRouteImport.update({
   path: '/clientes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuditoriaRoute = AuditoriaRouteImport.update({
+  id: '/auditoria',
+  path: '/auditoria',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -81,6 +100,11 @@ const ViagensIndexRoute = ViagensIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => ViagensRoute,
+} as any)
+const PlataformaIndexRoute = PlataformaIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PlataformaRoute,
 } as any)
 const MotoristaIndexRoute = MotoristaIndexRouteImport.update({
   id: '/',
@@ -92,6 +116,17 @@ const ViagensIdRoute = ViagensIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ViagensRoute,
 } as any)
+const PlataformaTransportadorasRoute =
+  PlataformaTransportadorasRouteImport.update({
+    id: '/transportadoras',
+    path: '/transportadoras',
+    getParentRoute: () => PlataformaRoute,
+  } as any)
+const PlataformaLoginRoute = PlataformaLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => PlataformaRoute,
+} as any)
 const MotoristaViagensRoute = MotoristaViagensRouteImport.update({
   id: '/viagens',
   path: '/viagens',
@@ -102,11 +137,34 @@ const MotoristaDashboardRoute = MotoristaDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => MotoristaRoute,
 } as any)
+const AcompanharTokenRoute = AcompanharTokenRouteImport.update({
+  id: '/acompanhar/$token',
+  path: '/acompanhar/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlataformaTransportadorasIndexRoute =
+  PlataformaTransportadorasIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => PlataformaTransportadorasRoute,
+  } as any)
 const MotoristaViagensIndexRoute = MotoristaViagensIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => MotoristaViagensRoute,
 } as any)
+const PlataformaTransportadorasNovaRoute =
+  PlataformaTransportadorasNovaRouteImport.update({
+    id: '/nova',
+    path: '/nova',
+    getParentRoute: () => PlataformaTransportadorasRoute,
+  } as any)
+const PlataformaTransportadorasIdRoute =
+  PlataformaTransportadorasIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => PlataformaTransportadorasRoute,
+  } as any)
 const MotoristaViagensIdRoute = MotoristaViagensIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -115,25 +173,35 @@ const MotoristaViagensIdRoute = MotoristaViagensIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auditoria': typeof AuditoriaRoute
   '/clientes': typeof ClientesRoute
   '/login': typeof LoginRoute
   '/motorista': typeof MotoristaRouteWithChildren
   '/motoristas': typeof MotoristasRoute
+  '/plataforma': typeof PlataformaRouteWithChildren
   '/produtos': typeof ProdutosRoute
   '/rastreamento': typeof RastreamentoRoute
   '/transportadora': typeof TransportadoraRoute
   '/veiculos': typeof VeiculosRoute
   '/viagens': typeof ViagensRouteWithChildren
+  '/acompanhar/$token': typeof AcompanharTokenRoute
   '/motorista/dashboard': typeof MotoristaDashboardRoute
   '/motorista/viagens': typeof MotoristaViagensRouteWithChildren
+  '/plataforma/login': typeof PlataformaLoginRoute
+  '/plataforma/transportadoras': typeof PlataformaTransportadorasRouteWithChildren
   '/viagens/$id': typeof ViagensIdRoute
   '/motorista/': typeof MotoristaIndexRoute
+  '/plataforma/': typeof PlataformaIndexRoute
   '/viagens/': typeof ViagensIndexRoute
   '/motorista/viagens/$id': typeof MotoristaViagensIdRoute
+  '/plataforma/transportadoras/$id': typeof PlataformaTransportadorasIdRoute
+  '/plataforma/transportadoras/nova': typeof PlataformaTransportadorasNovaRoute
   '/motorista/viagens/': typeof MotoristaViagensIndexRoute
+  '/plataforma/transportadoras/': typeof PlataformaTransportadorasIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auditoria': typeof AuditoriaRoute
   '/clientes': typeof ClientesRoute
   '/login': typeof LoginRoute
   '/motoristas': typeof MotoristasRoute
@@ -141,56 +209,81 @@ export interface FileRoutesByTo {
   '/rastreamento': typeof RastreamentoRoute
   '/transportadora': typeof TransportadoraRoute
   '/veiculos': typeof VeiculosRoute
+  '/acompanhar/$token': typeof AcompanharTokenRoute
   '/motorista/dashboard': typeof MotoristaDashboardRoute
+  '/plataforma/login': typeof PlataformaLoginRoute
   '/viagens/$id': typeof ViagensIdRoute
   '/motorista': typeof MotoristaIndexRoute
+  '/plataforma': typeof PlataformaIndexRoute
   '/viagens': typeof ViagensIndexRoute
   '/motorista/viagens/$id': typeof MotoristaViagensIdRoute
+  '/plataforma/transportadoras/$id': typeof PlataformaTransportadorasIdRoute
+  '/plataforma/transportadoras/nova': typeof PlataformaTransportadorasNovaRoute
   '/motorista/viagens': typeof MotoristaViagensIndexRoute
+  '/plataforma/transportadoras': typeof PlataformaTransportadorasIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/auditoria': typeof AuditoriaRoute
   '/clientes': typeof ClientesRoute
   '/login': typeof LoginRoute
   '/motorista': typeof MotoristaRouteWithChildren
   '/motoristas': typeof MotoristasRoute
+  '/plataforma': typeof PlataformaRouteWithChildren
   '/produtos': typeof ProdutosRoute
   '/rastreamento': typeof RastreamentoRoute
   '/transportadora': typeof TransportadoraRoute
   '/veiculos': typeof VeiculosRoute
   '/viagens': typeof ViagensRouteWithChildren
+  '/acompanhar/$token': typeof AcompanharTokenRoute
   '/motorista/dashboard': typeof MotoristaDashboardRoute
   '/motorista/viagens': typeof MotoristaViagensRouteWithChildren
+  '/plataforma/login': typeof PlataformaLoginRoute
+  '/plataforma/transportadoras': typeof PlataformaTransportadorasRouteWithChildren
   '/viagens/$id': typeof ViagensIdRoute
   '/motorista/': typeof MotoristaIndexRoute
+  '/plataforma/': typeof PlataformaIndexRoute
   '/viagens/': typeof ViagensIndexRoute
   '/motorista/viagens/$id': typeof MotoristaViagensIdRoute
+  '/plataforma/transportadoras/$id': typeof PlataformaTransportadorasIdRoute
+  '/plataforma/transportadoras/nova': typeof PlataformaTransportadorasNovaRoute
   '/motorista/viagens/': typeof MotoristaViagensIndexRoute
+  '/plataforma/transportadoras/': typeof PlataformaTransportadorasIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/auditoria'
     | '/clientes'
     | '/login'
     | '/motorista'
     | '/motoristas'
+    | '/plataforma'
     | '/produtos'
     | '/rastreamento'
     | '/transportadora'
     | '/veiculos'
     | '/viagens'
+    | '/acompanhar/$token'
     | '/motorista/dashboard'
     | '/motorista/viagens'
+    | '/plataforma/login'
+    | '/plataforma/transportadoras'
     | '/viagens/$id'
     | '/motorista/'
+    | '/plataforma/'
     | '/viagens/'
     | '/motorista/viagens/$id'
+    | '/plataforma/transportadoras/$id'
+    | '/plataforma/transportadoras/nova'
     | '/motorista/viagens/'
+    | '/plataforma/transportadoras/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/auditoria'
     | '/clientes'
     | '/login'
     | '/motoristas'
@@ -198,44 +291,62 @@ export interface FileRouteTypes {
     | '/rastreamento'
     | '/transportadora'
     | '/veiculos'
+    | '/acompanhar/$token'
     | '/motorista/dashboard'
+    | '/plataforma/login'
     | '/viagens/$id'
     | '/motorista'
+    | '/plataforma'
     | '/viagens'
     | '/motorista/viagens/$id'
+    | '/plataforma/transportadoras/$id'
+    | '/plataforma/transportadoras/nova'
     | '/motorista/viagens'
+    | '/plataforma/transportadoras'
   id:
     | '__root__'
     | '/'
+    | '/auditoria'
     | '/clientes'
     | '/login'
     | '/motorista'
     | '/motoristas'
+    | '/plataforma'
     | '/produtos'
     | '/rastreamento'
     | '/transportadora'
     | '/veiculos'
     | '/viagens'
+    | '/acompanhar/$token'
     | '/motorista/dashboard'
     | '/motorista/viagens'
+    | '/plataforma/login'
+    | '/plataforma/transportadoras'
     | '/viagens/$id'
     | '/motorista/'
+    | '/plataforma/'
     | '/viagens/'
     | '/motorista/viagens/$id'
+    | '/plataforma/transportadoras/$id'
+    | '/plataforma/transportadoras/nova'
     | '/motorista/viagens/'
+    | '/plataforma/transportadoras/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuditoriaRoute: typeof AuditoriaRoute
   ClientesRoute: typeof ClientesRoute
   LoginRoute: typeof LoginRoute
   MotoristaRoute: typeof MotoristaRouteWithChildren
   MotoristasRoute: typeof MotoristasRoute
+  PlataformaRoute: typeof PlataformaRouteWithChildren
   ProdutosRoute: typeof ProdutosRoute
   RastreamentoRoute: typeof RastreamentoRoute
   TransportadoraRoute: typeof TransportadoraRoute
   VeiculosRoute: typeof VeiculosRoute
   ViagensRoute: typeof ViagensRouteWithChildren
+  AcompanharTokenRoute: typeof AcompanharTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -275,6 +386,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProdutosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/plataforma': {
+      id: '/plataforma'
+      path: '/plataforma'
+      fullPath: '/plataforma'
+      preLoaderRoute: typeof PlataformaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/motoristas': {
       id: '/motoristas'
       path: '/motoristas'
@@ -303,6 +421,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auditoria': {
+      id: '/auditoria'
+      path: '/auditoria'
+      fullPath: '/auditoria'
+      preLoaderRoute: typeof AuditoriaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -316,6 +441,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/viagens/'
       preLoaderRoute: typeof ViagensIndexRouteImport
       parentRoute: typeof ViagensRoute
+    }
+    '/plataforma/': {
+      id: '/plataforma/'
+      path: '/'
+      fullPath: '/plataforma/'
+      preLoaderRoute: typeof PlataformaIndexRouteImport
+      parentRoute: typeof PlataformaRoute
     }
     '/motorista/': {
       id: '/motorista/'
@@ -331,6 +463,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ViagensIdRouteImport
       parentRoute: typeof ViagensRoute
     }
+    '/plataforma/transportadoras': {
+      id: '/plataforma/transportadoras'
+      path: '/transportadoras'
+      fullPath: '/plataforma/transportadoras'
+      preLoaderRoute: typeof PlataformaTransportadorasRouteImport
+      parentRoute: typeof PlataformaRoute
+    }
+    '/plataforma/login': {
+      id: '/plataforma/login'
+      path: '/login'
+      fullPath: '/plataforma/login'
+      preLoaderRoute: typeof PlataformaLoginRouteImport
+      parentRoute: typeof PlataformaRoute
+    }
     '/motorista/viagens': {
       id: '/motorista/viagens'
       path: '/viagens'
@@ -345,12 +491,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MotoristaDashboardRouteImport
       parentRoute: typeof MotoristaRoute
     }
+    '/acompanhar/$token': {
+      id: '/acompanhar/$token'
+      path: '/acompanhar/$token'
+      fullPath: '/acompanhar/$token'
+      preLoaderRoute: typeof AcompanharTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/plataforma/transportadoras/': {
+      id: '/plataforma/transportadoras/'
+      path: '/'
+      fullPath: '/plataforma/transportadoras/'
+      preLoaderRoute: typeof PlataformaTransportadorasIndexRouteImport
+      parentRoute: typeof PlataformaTransportadorasRoute
+    }
     '/motorista/viagens/': {
       id: '/motorista/viagens/'
       path: '/'
       fullPath: '/motorista/viagens/'
       preLoaderRoute: typeof MotoristaViagensIndexRouteImport
       parentRoute: typeof MotoristaViagensRoute
+    }
+    '/plataforma/transportadoras/nova': {
+      id: '/plataforma/transportadoras/nova'
+      path: '/nova'
+      fullPath: '/plataforma/transportadoras/nova'
+      preLoaderRoute: typeof PlataformaTransportadorasNovaRouteImport
+      parentRoute: typeof PlataformaTransportadorasRoute
+    }
+    '/plataforma/transportadoras/$id': {
+      id: '/plataforma/transportadoras/$id'
+      path: '/$id'
+      fullPath: '/plataforma/transportadoras/$id'
+      preLoaderRoute: typeof PlataformaTransportadorasIdRouteImport
+      parentRoute: typeof PlataformaTransportadorasRoute
     }
     '/motorista/viagens/$id': {
       id: '/motorista/viagens/$id'
@@ -391,6 +565,40 @@ const MotoristaRouteWithChildren = MotoristaRoute._addFileChildren(
   MotoristaRouteChildren,
 )
 
+interface PlataformaTransportadorasRouteChildren {
+  PlataformaTransportadorasIdRoute: typeof PlataformaTransportadorasIdRoute
+  PlataformaTransportadorasNovaRoute: typeof PlataformaTransportadorasNovaRoute
+  PlataformaTransportadorasIndexRoute: typeof PlataformaTransportadorasIndexRoute
+}
+
+const PlataformaTransportadorasRouteChildren: PlataformaTransportadorasRouteChildren =
+  {
+    PlataformaTransportadorasIdRoute: PlataformaTransportadorasIdRoute,
+    PlataformaTransportadorasNovaRoute: PlataformaTransportadorasNovaRoute,
+    PlataformaTransportadorasIndexRoute: PlataformaTransportadorasIndexRoute,
+  }
+
+const PlataformaTransportadorasRouteWithChildren =
+  PlataformaTransportadorasRoute._addFileChildren(
+    PlataformaTransportadorasRouteChildren,
+  )
+
+interface PlataformaRouteChildren {
+  PlataformaLoginRoute: typeof PlataformaLoginRoute
+  PlataformaTransportadorasRoute: typeof PlataformaTransportadorasRouteWithChildren
+  PlataformaIndexRoute: typeof PlataformaIndexRoute
+}
+
+const PlataformaRouteChildren: PlataformaRouteChildren = {
+  PlataformaLoginRoute: PlataformaLoginRoute,
+  PlataformaTransportadorasRoute: PlataformaTransportadorasRouteWithChildren,
+  PlataformaIndexRoute: PlataformaIndexRoute,
+}
+
+const PlataformaRouteWithChildren = PlataformaRoute._addFileChildren(
+  PlataformaRouteChildren,
+)
+
 interface ViagensRouteChildren {
   ViagensIdRoute: typeof ViagensIdRoute
   ViagensIndexRoute: typeof ViagensIndexRoute
@@ -406,15 +614,18 @@ const ViagensRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuditoriaRoute: AuditoriaRoute,
   ClientesRoute: ClientesRoute,
   LoginRoute: LoginRoute,
   MotoristaRoute: MotoristaRouteWithChildren,
   MotoristasRoute: MotoristasRoute,
+  PlataformaRoute: PlataformaRouteWithChildren,
   ProdutosRoute: ProdutosRoute,
   RastreamentoRoute: RastreamentoRoute,
   TransportadoraRoute: TransportadoraRoute,
   VeiculosRoute: VeiculosRoute,
   ViagensRoute: ViagensRouteWithChildren,
+  AcompanharTokenRoute: AcompanharTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

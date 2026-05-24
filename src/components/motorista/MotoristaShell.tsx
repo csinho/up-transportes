@@ -1,12 +1,14 @@
 import { useEffect } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Home, List, LogOut, Truck, Wifi, WifiOff, CloudOff } from "lucide-react";
+import { Home, List, LogOut, Wifi, WifiOff, CloudOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MotoristaInstalarPwa } from "@/components/motorista/MotoristaInstalarPwa";
+import { TransportadoraLogo } from "@/components/transportadora/TransportadoraLogo";
 import { useMotoristaSession } from "@/hooks/use-motorista-session";
 import { useMotoristaOfflineSync } from "@/hooks/use-motorista-offline-sync";
 import { registerMotoristaServiceWorker } from "@/lib/register-motorista-sw";
+import type { UUID } from "@/types";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -14,22 +16,34 @@ type Props = {
   voltarPara?: string;
   /** Tela de login — sem menu inferior */
   auth?: boolean;
+  transportadoraId?: UUID;
   children: React.ReactNode;
 };
 
-export function MotoristaShell({ titulo = "Motorista", voltarPara, auth, children }: Props) {
+export function MotoristaShell({
+  titulo = "Motorista",
+  voltarPara,
+  auth,
+  transportadoraId: transportadoraIdProp,
+  children,
+}: Props) {
   const { session, logout } = useMotoristaSession();
   const { online, pending } = useMotoristaOfflineSync();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const transportadoraId = session?.transportadoraId ?? transportadoraIdProp;
 
   useEffect(() => {
     registerMotoristaServiceWorker();
   }, []);
 
   const sair = () => {
+    const tenantId = session?.transportadoraId;
     logout();
-    navigate({ to: "/motorista" });
+    void navigate({
+      to: "/motorista",
+      search: tenantId ? { t: tenantId } : {},
+    });
   };
 
   const navItems = [
@@ -52,9 +66,7 @@ export function MotoristaShell({ titulo = "Motorista", voltarPara, auth, childre
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="flex h-14 items-center justify-between gap-3 px-4 max-w-lg mx-auto w-full">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Truck className="h-5 w-5" />
-            </div>
+            <TransportadoraLogo transportadoraId={transportadoraId} size="sm" />
             <div className="min-w-0">
               <p className="text-sm font-semibold truncate">{titulo}</p>
               {session && !auth && (

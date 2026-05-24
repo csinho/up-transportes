@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireErpRoles } from "@/lib/erp-auth-route";
 import { useEffect, useState } from "react";
 import { useActiveTenantId, useTransportadora, useSaveTransportadora } from "@/data/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,18 +16,22 @@ import {
 } from "@/components/ui/select";
 import { AddressForm } from "@/components/AddressForm";
 import { DocumentUploader } from "@/components/DocumentUploader";
+import { TransportadoraLogoUpload } from "@/components/transportadora/TransportadoraLogoUpload";
+import { ColaboradoresPanel } from "@/components/transportadora/ColaboradoresPanel";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Transportadora } from "@/types";
 import { maskCNPJ, maskCPF, maskPhone } from "@/lib/masks";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/transportadora")({
+  beforeLoad: () => requireErpRoles("owner"),
   head: () => ({ meta: [{ title: "Transportadora — Configuração" }] }),
   component: Page,
 });
 
 function Page() {
   const tenantId = useActiveTenantId();
-  const { data: existing } = useTransportadora(tenantId);
+  const { data: existing, isPending, isError } = useTransportadora(tenantId);
   const save = useSaveTransportadora();
   const [form, setForm] = useState<Transportadora | null>(null);
 
@@ -34,7 +39,17 @@ function Page() {
     if (existing) setForm(existing);
   }, [existing]);
 
-  if (!form) return <p className="text-sm text-muted-foreground">Carregando...</p>;
+  if (isPending || (!form && !isError)) {
+    return <p className="text-sm text-muted-foreground">Carregando...</p>;
+  }
+
+  if (isError || !form) {
+    return (
+      <p className="text-sm text-destructive">
+        Não foi possível carregar os dados da transportadora. Tente recarregar a página.
+      </p>
+    );
+  }
 
   const set = <K extends keyof Transportadora>(k: K, v: Transportadora[K]) =>
     setForm({ ...form, [k]: v });
@@ -56,6 +71,21 @@ function Page() {
         <Button onClick={handleSave}>Salvar</Button>
       </div>
 
+      <Tabs defaultValue="dados" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="dados">Dados da empresa</TabsTrigger>
+          <TabsTrigger value="colaboradores">Colaboradores</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="colaboradores">
+          <Card>
+            <CardContent className="pt-6">
+              <ColaboradoresPanel transportadoraId={tenantId} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="dados" className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Identificação</CardTitle>
@@ -102,9 +132,13 @@ function Page() {
             <Label>Inscrição municipal</Label>
             <Input value={form.inscricao_municipal ?? ""} onChange={(e) => set("inscricao_municipal", e.target.value)} />
           </div>
-          <div>
-            <Label>Logo (URL)</Label>
-            <Input value={form.logo_url ?? ""} onChange={(e) => set("logo_url", e.target.value)} placeholder="https://..." />
+          <div className="md:col-span-3">
+            <TransportadoraLogoUpload
+              transportadoraId={tenantId}
+              entidadeId={form.id}
+              logoUrl={form.logo_url}
+              onChange={(url) => set("logo_url", url)}
+            />
           </div>
         </CardContent>
       </Card>
@@ -188,6 +222,8 @@ function Page() {
       <div className="flex justify-end">
         <Button onClick={handleSave} size="lg">Salvar configuração</Button>
       </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

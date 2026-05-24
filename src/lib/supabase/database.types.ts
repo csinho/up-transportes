@@ -86,9 +86,27 @@ export type Database = {
         Relationships: [];
       };
       profiles: {
-        Row: { created_at: string; id: string; nome: string | null };
-        Insert: { created_at?: string; id: string; nome?: string | null };
-        Update: { created_at?: string; id?: string; nome?: string | null };
+        Row: {
+          created_at: string;
+          email: string | null;
+          id: string;
+          is_super_admin: boolean;
+          nome: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          email?: string | null;
+          id: string;
+          is_super_admin?: boolean;
+          nome?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          email?: string | null;
+          id?: string;
+          is_super_admin?: boolean;
+          nome?: string | null;
+        };
         Relationships: [];
       };
       transportadoras: {

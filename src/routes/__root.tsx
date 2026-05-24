@@ -112,24 +112,40 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { TenantSwitcher } from "@/components/layout/TenantSwitcher";
 import { MotoristaAppLinkCopy } from "@/components/layout/MotoristaAppLinkCopy";
+import { useErpPermissions } from "@/hooks/use-erp-permissions";
 import { Toaster } from "@/components/ui/sonner";
 import { isMotoristaAppPath } from "@/lib/motorista-app-path";
+import { isAcompanharPath } from "@/lib/acompanhar-app-path";
+import { isPlataformaLoginPath, isPlataformaPath } from "@/lib/plataforma-app-path";
 import { SupabaseRequired } from "@/components/auth/SupabaseRequired";
 import { ErpAuthGate } from "@/components/auth/ErpAuthGate";
+import { PlatformAuthGate } from "@/components/auth/PlatformAuthGate";
+import { PlatformSidebar } from "@/components/layout/PlatformSidebar";
 import { ErpUserMenu } from "@/components/auth/ErpUserMenu";
+import { signOut } from "@/hooks/use-auth-session";
+import { useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
+import { traduzirErroSupabase } from "@/lib/supabase/traduzir-erro";
 import { OperacaoRealtimeBridge } from "@/components/OperacaoRealtimeBridge";
 
 function isPublicAppPath(pathname: string): boolean {
-  return isMotoristaAppPath(pathname) || pathname === "/login";
+  return (
+    isMotoristaAppPath(pathname) ||
+    isAcompanharPath(pathname) ||
+    pathname === "/login" ||
+    isPlataformaLoginPath(pathname)
+  );
 }
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isPublic = isPublicAppPath(pathname);
+  const isPlataforma = isPlataformaPath(pathname);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -140,30 +156,78 @@ function RootComponent() {
             <Outlet />
             <Toaster />
           </>
+        ) : isPlataforma ? (
+          <PlatformAuthGate>
+            <PlatformShell />
+          </PlatformAuthGate>
         ) : (
           <ErpAuthGate>
-          <SidebarProvider>
-            <div className="min-h-screen flex w-full bg-background">
-              <AppSidebar />
-              <div className="flex-1 flex flex-col min-w-0">
-                <header className="h-14 border-b flex items-center justify-between px-4 gap-4">
-                  <SidebarTrigger />
-                  <div className="flex items-center gap-3">
-                    <TenantSwitcher />
-                    <MotoristaAppLinkCopy />
-                    <ErpUserMenu />
-                  </div>
-                </header>
-                <main className="flex-1 p-6 overflow-auto">
-                  <Outlet />
-                </main>
-              </div>
-            </div>
-          </SidebarProvider>
-          <Toaster />
-        </ErpAuthGate>
+            <ErpShell />
+          </ErpAuthGate>
         )}
       </SupabaseRequired>
     </QueryClientProvider>
+  );
+}
+
+function PlatformShell() {
+  const navigate = useNavigate();
+
+  const sair = async () => {
+    try {
+      await signOut();
+      void navigate({ to: "/plataforma/login", replace: true });
+    } catch (err) {
+      toast.error(traduzirErroSupabase(err, "Não foi possível sair"));
+    }
+  };
+
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background">
+        <PlatformSidebar />
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="h-14 border-b flex items-center justify-between px-4 gap-4">
+            <SidebarTrigger />
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground hidden sm:inline">Console da plataforma</span>
+              <Button variant="ghost" size="sm" onClick={() => void sair()}>
+                Sair
+              </Button>
+            </div>
+          </header>
+          <main className="flex-1 p-6 overflow-auto">
+            <Outlet />
+          </main>
+        </div>
+      </div>
+      <Toaster />
+    </SidebarProvider>
+  );
+}
+
+function ErpShell() {
+  const { isOwner } = useErpPermissions();
+
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background">
+        <AppSidebar />
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="h-14 border-b flex items-center justify-between px-4 gap-4">
+            <SidebarTrigger />
+            <div className="flex items-center gap-3">
+              <TenantSwitcher />
+              {isOwner && <MotoristaAppLinkCopy />}
+              <ErpUserMenu />
+            </div>
+          </header>
+          <main className="flex-1 p-6 overflow-auto">
+            <Outlet />
+          </main>
+        </div>
+      </div>
+      <Toaster />
+    </SidebarProvider>
   );
 }
