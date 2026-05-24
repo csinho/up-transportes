@@ -109,6 +109,7 @@ begin
 end;
 $$;
 
+
 -- Tabela legada (substituída por profiles.is_super_admin)
 drop policy if exists platform_admins_self on public.platform_admins;
 drop table if exists public.platform_admins;
