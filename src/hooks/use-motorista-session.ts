@@ -10,6 +10,8 @@ import {
 import { logoutMotoristaSupabase } from "@/lib/supabase/motorista-auth";
 import { syncMotoristaOfflineAuthToServiceWorker } from "@/lib/motorista-sw-cache";
 import { resetMotoristaChunkPrefetch } from "@/lib/motorista-chunk-prefetch";
+import { clearMotoristaSetupSession } from "@/lib/motorista-offline-setup";
+import { clearOfflineReadyToastFlag } from "@/lib/motorista-offline-toast";
 
 function readSession(): MotoristaSession | null {
   if (typeof window === "undefined") return null;
@@ -58,6 +60,8 @@ export function useMotoristaSession() {
 
   const logout = useCallback(() => {
     resetMotoristaChunkPrefetch();
+    clearMotoristaSetupSession();
+    clearOfflineReadyToastFlag();
     void logoutMotoristaSupabase();
     clearMotoristaSession();
     setSession(null);

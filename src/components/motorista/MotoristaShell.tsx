@@ -95,7 +95,7 @@ export function MotoristaShell({
             {online ? (
               <Wifi className="h-4 w-4 text-emerald-600" aria-label="Online" />
             ) : (
-              <WifiOff className="h-4 w-4 text-amber-600" aria-label="Offline" />
+              <WifiOff className="h-4 w-4 text-orange-600" aria-label="Offline" />
             )}
             {session && !auth && (
               <Button variant="ghost" size="icon" onClick={sair} aria-label="Sair">
@@ -105,10 +105,10 @@ export function MotoristaShell({
           </div>
         </div>
         {!online && !auth && (
-          <div className="bg-amber-500/10 px-4 py-1.5 text-center text-xs text-amber-800 dark:text-amber-200">
+          <div className="bg-orange-600/15 border-b border-orange-600/25 px-4 py-2 text-center text-xs font-medium text-orange-950 dark:bg-orange-950/40 dark:border-orange-500/30 dark:text-orange-100">
             {pending > 0
               ? `${pending} alteração(ões) no aparelho — serão enviadas ao reconectar`
-              : "Sem internet — dados salvos no aparelho (IndexedDB)"}
+              : "Sem internet — usando dados salvos no aparelho"}
           </div>
         )}
       </header>

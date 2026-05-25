@@ -1,7 +1,7 @@
 /**
  * PWA motorista — cache do shell + roteamento offline quando já logado.
  */
-const CACHE_VERSION = "transpo-motorista-v5";
+const CACHE_VERSION = "transpo-motorista-v6";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const AUTH_DB = "erp_transp_motorista_sw_auth_v1";
@@ -28,16 +28,27 @@ function isMotoristaEntry(pathname) {
   return pathname === "/motorista" || pathname === "/motorista/";
 }
 
+function isHeavyErpAsset(pathname) {
+  const lower = pathname.toLowerCase();
+  return lower.includes("vfs_fonts") || lower.includes("leaflet");
+}
+
 function isMotoristaRelatedAsset(pathname) {
-  if (!pathname.startsWith("/assets/")) return false;
+  if (!pathname.startsWith("/assets/") || !pathname.endsWith(".js")) return false;
+  if (isHeavyErpAsset(pathname)) return false;
   const lower = pathname.toLowerCase();
   return (
     lower.includes("motorista") ||
     lower.includes("motoristashell") ||
-    lower.includes("use-motorista-data") ||
+    lower.includes("use-motorista") ||
     lower.includes("viagemprogresso") ||
     lower.includes("viagemeventos") ||
-    lower.includes("viagem-progresso")
+    lower.includes("viagem-progresso") ||
+    lower.includes("tabs-") ||
+    lower.includes("alert-dialog") ||
+    lower.includes("sheet") ||
+    lower.includes("ocorrencia") ||
+    lower.includes("finalizar")
   );
 }
 
