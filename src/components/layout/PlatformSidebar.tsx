@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { signOut, useAuthSession } from "@/hooks/use-auth-session";
 import { toast } from "sonner";
 import { traduzirErroSupabase } from "@/lib/supabase/traduzir-erro";
+import { cn } from "@/lib/utils";
 
 const items = [
   { title: "Transportadoras", url: "/plataforma/transportadoras", icon: Building2 },
@@ -36,14 +37,29 @@ export function PlatformSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold text-sm">
+      <SidebarHeader
+        className={cn(
+          "px-4 py-3",
+          "group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-2 group-data-[collapsible=icon]:overflow-hidden",
+        )}
+      >
+        <div
+          className={cn(
+            "flex items-center gap-2 min-w-0",
+            "group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0",
+          )}
+        >
+          <div
+            className={cn(
+              "h-8 w-8 shrink-0 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold text-sm",
+              "group-data-[collapsible=icon]:h-6 group-data-[collapsible=icon]:w-6 group-data-[collapsible=icon]:text-xs",
+            )}
+          >
             P
           </div>
-          <div className="text-sm">
-            <p className="font-semibold leading-none">Plataforma</p>
-            <p className="text-xs text-muted-foreground">Gestão SaaS</p>
+          <div className="min-w-0 text-sm group-data-[collapsible=icon]:hidden">
+            <p className="font-semibold leading-none truncate">Plataforma</p>
+            <p className="text-xs text-muted-foreground truncate">Gestão SaaS</p>
           </div>
         </div>
       </SidebarHeader>

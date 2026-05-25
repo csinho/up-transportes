@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { MapPin, Radio, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { ViagemStatusBadge } from "@/components/viagem/ViagemStatusBadge";
 import { TransportadoraLogo } from "@/components/transportadora/TransportadoraLogo";
 import { ViagemRastreamentoMap } from "@/components/rastreamento/ViagemRastreamentoMap";

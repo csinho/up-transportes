@@ -48,9 +48,12 @@ export async function ensureDemoTenantLink(): Promise<void> {
     return;
   }
 
+  // Em produção não auto-vincula à transportadora demo (evita lista de "proprietários" fantasma).
+  if (!import.meta.env.DEV) return;
+
   const { error } = await supabase.rpc("link_my_transportadora", {
     tid: DEMO_TRANSPORTADORA_ID,
-    p_role: "owner",
+    p_role: "operador",
   });
 
   if (error) {
