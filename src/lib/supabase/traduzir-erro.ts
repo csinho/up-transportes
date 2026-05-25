@@ -120,6 +120,10 @@ export function traduzirErroSupabase(err: unknown, contexto?: string): string {
     return contexto ? `${contexto}.` : "Ocorreu um erro inesperado.";
   }
 
+  if (err instanceof TypeError && /failed to fetch/i.test(err.message)) {
+    return "Sem conexão com o servidor. Verifique a internet ou use o modo offline se já entrou neste aparelho.";
+  }
+
   const e = extrairErro(err);
   const codigo = e.code ?? e.error ?? e.name;
   const mensagemOriginal = e.message ?? e.error_description ?? "";

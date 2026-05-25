@@ -1,6 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
+import { getMotoristaSession } from "@/lib/motorista-session";
+import { loadMotoristaCacheIntoQueries } from "@/lib/motorista-cache-sync";
 import { MotoristaShell } from "@/components/motorista/MotoristaShell";
 import { MotoristaInstalarPwa } from "@/components/motorista/MotoristaInstalarPwa";
 import { MotoristaLoginForm } from "@/components/motorista/MotoristaLoginForm";
@@ -25,10 +28,20 @@ export const Route = createFileRoute("/motorista/")({
 function Page() {
   const { t } = Route.useSearch();
   const transportadoraId = resolveMotoristaBrandingTenantId(t);
+  const navigate = useNavigate();
+  const qc = useQueryClient();
 
   useEffect(() => {
     if (isValidTransportadoraId(t)) persistMotoristaBrandingTenant(t);
   }, [t]);
+
+  /** Sessão local: pula login ao reabrir o PWA offline (beforeLoad pode não ver storage no SSR). */
+  useEffect(() => {
+    const session = getMotoristaSession();
+    if (!session) return;
+    void loadMotoristaCacheIntoQueries(qc, session.transportadoraId);
+    void navigate({ to: "/motorista/dashboard", replace: true });
+  }, [navigate, qc]);
 
   return (
     <MotoristaShell titulo="Entrar" auth transportadoraId={transportadoraId}>

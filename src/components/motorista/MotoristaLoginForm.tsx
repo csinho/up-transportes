@@ -10,8 +10,11 @@ import { useMotoristaSession } from "@/hooks/use-motorista-session";
 import { loginMotoristaPorCpf } from "@/lib/supabase/motorista-auth";
 import { traduzirErroSupabase } from "@/lib/supabase/traduzir-erro";
 import { persistMotoristaBrandingTenant } from "@/lib/motorista-tenant";
+import { isMotoristaOnline } from "@/lib/motorista-online";
+import { tryMotoristaOfflineLogin } from "@/lib/motorista-offline-login";
+import { getMotoristaSession } from "@/lib/motorista-session";
 import { toast } from "sonner";
-import { LogIn } from "lucide-react";
+import { LogIn, WifiOff } from "lucide-react";
 
 type Props = {
   onSuccess?: () => void;
@@ -23,6 +26,8 @@ export function MotoristaLoginForm({ onSuccess }: Props) {
   const qc = useQueryClient();
   const [cpf, setCpf] = useState("");
   const [entrando, setEntrando] = useState(false);
+  const offline = typeof navigator !== "undefined" && !isMotoristaOnline();
+  const sessaoSalva = getMotoristaSession();
 
   const entrar = () => {
     if (entrando) return;
@@ -30,6 +35,20 @@ export function MotoristaLoginForm({ onSuccess }: Props) {
 
     void (async () => {
       try {
+        if (!isMotoristaOnline()) {
+          const offlineResult = await tryMotoristaOfflineLogin(cpf, qc);
+          if (offlineResult.ok === false) {
+            if (offlineResult.message !== "use_online") {
+              toast.error(offlineResult.message);
+            }
+          } else {
+            toast.success(`Bem-vindo de volta, ${offlineResult.session.nome.split(" ")[0]}!`);
+            onSuccess?.();
+            void navigate({ to: "/motorista/dashboard", replace: true });
+          }
+          return;
+        }
+
         const auth = await loginMotoristaPorCpf(cpf);
         loginWithAuth({
           motoristaId: auth.motoristaId,
@@ -60,6 +79,16 @@ export function MotoristaLoginForm({ onSuccess }: Props) {
         <CardDescription>Informe seu CPF para acessar suas viagens.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {offline && (
+          <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-100 flex gap-2">
+            <WifiOff className="h-4 w-4 shrink-0 mt-0.5" />
+            <span>
+              {sessaoSalva
+                ? "Sem internet. Informe o mesmo CPF do último login neste aparelho para abrir suas viagens salvas."
+                : "Sem internet. O primeiro acesso precisa ser feito com conexão; depois você poderá usar offline."}
+            </span>
+          </div>
+        )}
         <div className="space-y-2">
           <Label htmlFor="cpf-motorista">CPF</Label>
           <Input
