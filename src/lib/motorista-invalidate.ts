@@ -7,25 +7,36 @@ import {
   patchMotoristaQueriesFromCache,
 } from "@/lib/motorista-offline-store";
 
+function patchMotoristaFromIdb(qc: QueryClient, tenantId: string) {
+  void (async () => {
+    const cache = await getMotoristaCache(tenantId);
+    if (cache) patchMotoristaQueriesFromCache(qc, cache);
+  })();
+}
+
 function invalidateRecursosQueries(qc: QueryClient) {
-  qc.invalidateQueries({ queryKey: ["viagens"] });
-  qc.invalidateQueries({ queryKey: ["motoristas"] });
-  qc.invalidateQueries({ queryKey: ["veiculos"] });
+  const opts = { refetchType: "active" as const };
+  void qc.invalidateQueries({ queryKey: ["viagens"], ...opts });
+  void qc.invalidateQueries({ queryKey: ["motoristas"], ...opts });
+  void qc.invalidateQueries({ queryKey: ["veiculos"], ...opts });
 }
 
 export function invalidateMotoristaData(qc: QueryClient) {
   const session = getMotoristaSession();
   const onMotorista =
     typeof window !== "undefined" && isMotoristaAppPath(window.location.pathname);
+
   if (session && onMotorista && !isMotoristaOnline()) {
-    void (async () => {
-      const cache = await getMotoristaCache(session.transportadoraId);
-      if (cache) patchMotoristaQueriesFromCache(qc, cache);
-    })();
+    patchMotoristaFromIdb(qc, session.transportadoraId);
     return;
   }
+
+  if (session && onMotorista) {
+    patchMotoristaFromIdb(qc, session.transportadoraId);
+  }
+
   invalidateRecursosQueries(qc);
-  qc.invalidateQueries({ queryKey: ["viagem_eventos"] });
-  qc.invalidateQueries({ queryKey: ["viagem_ocorrencias"] });
-  qc.invalidateQueries({ queryKey: ["viagem_localizacoes"] });
+  void qc.invalidateQueries({ queryKey: ["viagem_eventos"], refetchType: "active" });
+  void qc.invalidateQueries({ queryKey: ["viagem_ocorrencias"], refetchType: "active" });
+  void qc.invalidateQueries({ queryKey: ["viagem_localizacoes"], refetchType: "active" });
 }

@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { useActiveTenantId } from "@/data/store";
+import { useMotoristaTenantId } from "@/hooks/use-motorista-tenant";
+import { hydrateMotoristaCacheBeforeLoad } from "@/lib/motorista-route-cache";
+import { isMotoristaOnline } from "@/lib/motorista-online";
+import { OFFLINE_MSG } from "@/lib/motorista-query-offline";
 import {
   useMotoristaViagem,
   useMotoristaViagemLocalizacoes,
@@ -18,7 +21,6 @@ import { useMotoristaSession } from "@/hooks/use-motorista-session";
 import { useViagemGeolocalizacao } from "@/hooks/use-viagem-geolocalizacao";
 import { calcularProgressoViagem } from "@/lib/viagem-progresso";
 import { isViagemAtiva } from "@/lib/viagem-recursos";
-import { requireMotoristaSession } from "@/lib/motorista-auth-route";
 import { fmtMoeda } from "@/lib/motorista-app-path";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +29,7 @@ import type { Viagem } from "@/types";
 import { MapPin, Navigation } from "lucide-react";
 
 export const Route = createFileRoute("/motorista/viagens/$id")({
-  beforeLoad: requireMotoristaSession,
+  beforeLoad: ({ context }) => hydrateMotoristaCacheBeforeLoad(context),
   head: () => ({
     meta: [{ title: "Viagem — App Motorista" }],
   }),
@@ -37,8 +39,8 @@ export const Route = createFileRoute("/motorista/viagens/$id")({
 function Page() {
   const { id } = Route.useParams();
   const { session } = useMotoristaSession();
-  const tenantId = useActiveTenantId();
-  const { data: viagem } = useMotoristaViagem(id);
+  const tenantId = useMotoristaTenantId();
+  const { data: viagem, isFetched, isError, error } = useMotoristaViagem(id);
   const { data: localizacoes = [] } = useMotoristaViagemLocalizacoes(id);
   const { data: eventos = [] } = useMotoristaViagemEventos(id);
   const { data: ocorrencias = [] } = useMotoristaViagemOcorrencias(id);
@@ -66,9 +68,23 @@ function Page() {
   }
 
   if (!form) {
+    const offline = !isMotoristaOnline();
+    const msg =
+      isError && error instanceof Error
+        ? error.message
+        : isFetched && !viagem
+          ? offline
+            ? "Esta viagem não está nos dados salvos no aparelho. Abra o dashboard com internet para atualizar."
+            : "Viagem não encontrada."
+          : "Carregando…";
     return (
       <MotoristaShell titulo="Viagem" voltarPara="/motorista/viagens">
-        <p className="text-sm text-muted-foreground">Carregando…</p>
+        <p className="text-sm text-muted-foreground">{msg}</p>
+        {isError && error instanceof Error && error.message === OFFLINE_MSG && (
+          <p className="text-xs text-muted-foreground mt-2">
+            Conecte-se à internet, entre no início do app e aguarde a mensagem de dados salvos.
+          </p>
+        )}
       </MotoristaShell>
     );
   }

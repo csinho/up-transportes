@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useMotoristaSession } from "@/hooks/use-motorista-session";
@@ -11,13 +11,13 @@ import { isMotoristaOnline } from "@/lib/motorista-online";
 import { cacheMotoristaShellInServiceWorker } from "@/lib/motorista-sw-cache";
 
 /**
- * Só no dashboard do motorista: grava snapshot no IndexedDB (online)
- * e hidrata a UI para uso offline depois.
+ * Dashboard: hidrata cache local sempre; snapshot na rede só uma vez por sessão online.
  */
 export function useMotoristaDashboardSync() {
   const qc = useQueryClient();
   const { session } = useMotoristaSession();
   const [syncing, setSyncing] = useState(false);
+  const networkSyncedRef = useRef(false);
 
   useEffect(() => {
     if (!session) return;
@@ -25,6 +25,13 @@ export function useMotoristaDashboardSync() {
     void (async () => {
       setSyncing(true);
       try {
+        await loadMotoristaCacheIntoQueries(qc, session.transportadoraId);
+
+        if (!isMotoristaOnline()) return;
+
+        if (networkSyncedRef.current) return;
+        networkSyncedRef.current = true;
+
         const result = await syncMotoristaDashboardCache(
           qc,
           session.transportadoraId,
@@ -34,14 +41,12 @@ export function useMotoristaDashboardSync() {
 
         if (result.ok) {
           patchMotoristaQueriesFromCache(qc, result.cache);
-          if (isMotoristaOnline()) {
-            await cacheMotoristaShellInServiceWorker();
-            toast.success("Dados salvos no aparelho para uso offline");
-          }
+          await cacheMotoristaShellInServiceWorker();
+          toast.success("Dados salvos no aparelho para uso offline");
         } else {
           console.error("[motorista-offline] Falha no snapshot:", result.error);
           const hadCache = await loadMotoristaCacheIntoQueries(qc, session.transportadoraId);
-          if (!hadCache && isMotoristaOnline()) {
+          if (!hadCache) {
             toast.error("Não foi possível salvar dados offline. Tente atualizar a página.");
           }
         }

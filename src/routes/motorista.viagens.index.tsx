@@ -5,12 +5,12 @@ import { MotoristaShell } from "@/components/motorista/MotoristaShell";
 import { MotoristaViagemCard } from "@/components/motorista/MotoristaViagemCard";
 import { useMotoristaSession } from "@/hooks/use-motorista-session";
 import { isViagemAtiva } from "@/lib/viagem-recursos";
-import { requireMotoristaSession } from "@/lib/motorista-auth-route";
+import { hydrateMotoristaCacheBeforeLoad } from "@/lib/motorista-route-cache";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PackageOpen } from "lucide-react";
 
 export const Route = createFileRoute("/motorista/viagens/")({
-  beforeLoad: requireMotoristaSession,
+  beforeLoad: ({ context }) => hydrateMotoristaCacheBeforeLoad(context),
   head: () => ({ meta: [{ title: "Minhas viagens — App Motorista" }] }),
   component: Page,
 });

@@ -76,7 +76,7 @@ export function MotoristaViagemDestaque({ viagem }: Props) {
         </div>
 
         <Button className="w-full" size="lg" asChild>
-          <Link to="/motorista/viagens/$id" params={{ id: viagem.id }}>
+          <Link to="/motorista/viagens/$id" params={{ id: viagem.id }} preload={false}>
             Ver detalhes e atualizar status
             <ChevronRight className="h-4 w-4 ml-1" />
           </Link>

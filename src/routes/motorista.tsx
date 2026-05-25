@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { MotoristaErrorBoundary } from "@/components/motorista/MotoristaErrorBoundary";
 
 export const Route = createFileRoute("/motorista")({
   head: () => ({
@@ -15,5 +16,9 @@ export const Route = createFileRoute("/motorista")({
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
     ],
   }),
-  component: () => <Outlet />,
+  component: () => (
+    <MotoristaErrorBoundary>
+      <Outlet />
+    </MotoristaErrorBoundary>
+  ),
 });

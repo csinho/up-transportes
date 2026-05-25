@@ -7,12 +7,12 @@ import { MotoristaDashboardResumo } from "@/components/motorista/MotoristaDashbo
 import { MotoristaViagemDestaque } from "@/components/motorista/MotoristaViagemDestaque";
 import { useMotoristaSession } from "@/hooks/use-motorista-session";
 import { calcularResumoMotorista } from "@/lib/motorista-stats";
-import { requireMotoristaSession } from "@/lib/motorista-auth-route";
+import { hydrateMotoristaCacheBeforeLoad } from "@/lib/motorista-route-cache";
 import { Button } from "@/components/ui/button";
 import { PackageOpen, List } from "lucide-react";
 
 export const Route = createFileRoute("/motorista/dashboard")({
-  beforeLoad: requireMotoristaSession,
+  beforeLoad: ({ context }) => hydrateMotoristaCacheBeforeLoad(context),
   head: () => ({ meta: [{ title: "Início — App Motorista" }] }),
   component: Page,
 });
@@ -56,7 +56,7 @@ function Page() {
         </section>
 
         <Button variant="outline" className="w-full" asChild>
-          <Link to="/motorista/viagens">
+          <Link to="/motorista/viagens" preload={false}>
             <List className="h-4 w-4 mr-2" />
             Ver todas as minhas viagens
           </Link>

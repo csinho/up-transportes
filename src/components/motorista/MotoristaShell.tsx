@@ -116,7 +116,7 @@ export function MotoristaShell({
       {voltarPara && (
         <div className="px-4 pt-3 max-w-lg mx-auto w-full">
           <Button variant="ghost" size="sm" asChild className="-ml-2">
-            <Link to={voltarPara}>← Voltar</Link>
+            <Link to={voltarPara} preload={false}>← Voltar</Link>
           </Button>
         </div>
       )}
@@ -134,6 +134,7 @@ export function MotoristaShell({
                 <Link
                   key={item.to}
                   to={item.to}
+                  preload={false}
                   className={cn(
                     "flex-1 flex flex-col items-center gap-1 py-2.5 text-xs transition-colors",
                     active ? "text-primary font-medium" : "text-muted-foreground",

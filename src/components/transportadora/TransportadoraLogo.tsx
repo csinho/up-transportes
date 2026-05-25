@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Building2 } from "lucide-react";
 import { resolveLogoUrl } from "@/lib/logo-url";
 import { ensureMotoristaAnonymousSession } from "@/lib/supabase/motorista-auth";
+import { isMotoristaOnline } from "@/lib/motorista-online";
 import { useTransportadoraBranding } from "@/hooks/use-transportadora-branding";
 import type { UUID } from "@/types";
 import { cn } from "@/lib/utils";
@@ -46,6 +47,7 @@ export function TransportadoraLogo({
     let cancelled = false;
     setSrc(null);
     if (!logoPath || !transportadoraId) return;
+    if (sessionMode === "motorista" && !isMotoristaOnline()) return;
 
     void (async () => {
       if (sessionMode === "motorista") {

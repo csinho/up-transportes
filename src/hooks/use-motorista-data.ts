@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { UUID, Viagem, Veiculo, Cliente, ViagemEvento, ViagemOcorrencia, ViagemLocalizacao } from "@/types";
-import { useActiveTenantId } from "@/data/store";
+import { useMotoristaTenantId } from "@/hooks/use-motorista-tenant";
 import {
   fetchMotoristaViagens,
   fetchMotoristaVeiculos,
@@ -11,74 +11,84 @@ import {
   fetchMotoristaViagemLocalizacoes,
 } from "@/lib/motorista-query-offline";
 
-/** Viagens — PWA motorista (lê IndexedDB offline após sync no dashboard). */
+/** Evita refetch na rede quando offline — usa cache do IndexedDB / React Query. */
+const motoristaQueryOptions = {
+  retry: false,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
+  refetchOnMount: false,
+  throwOnError: false,
+  gcTime: 1000 * 60 * 60 * 24,
+  staleTime: 1000 * 60 * 30,
+} as const;
+
 export function useMotoristaViagens() {
-  const tenant = useActiveTenantId();
+  const tenant = useMotoristaTenantId();
   return useQuery({
     queryKey: ["viagens", tenant],
     enabled: !!tenant,
     queryFn: () => fetchMotoristaViagens(tenant),
-    staleTime: 30_000,
+    ...motoristaQueryOptions,
   });
 }
 
 export function useMotoristaViagem(id: UUID | undefined) {
-  const tenant = useActiveTenantId();
+  const tenant = useMotoristaTenantId();
   return useQuery({
     queryKey: ["viagens", "one", id],
     enabled: !!id && !!tenant,
     queryFn: () => (id ? fetchMotoristaViagem(id, tenant) : null),
-    staleTime: 15_000,
+    ...motoristaQueryOptions,
   });
 }
 
 export function useMotoristaVeiculos() {
-  const tenant = useActiveTenantId();
+  const tenant = useMotoristaTenantId();
   return useQuery({
     queryKey: ["veiculos", tenant],
     enabled: !!tenant,
     queryFn: () => fetchMotoristaVeiculos(tenant),
-    staleTime: 60_000,
+    ...motoristaQueryOptions,
   });
 }
 
 export function useMotoristaClientes() {
-  const tenant = useActiveTenantId();
+  const tenant = useMotoristaTenantId();
   return useQuery({
     queryKey: ["clientes", tenant],
     enabled: !!tenant,
     queryFn: () => fetchMotoristaClientes(tenant),
-    staleTime: 60_000,
+    ...motoristaQueryOptions,
   });
 }
 
 export function useMotoristaViagemEventos(viagemId: UUID | undefined) {
-  const tenant = useActiveTenantId();
+  const tenant = useMotoristaTenantId();
   return useQuery({
     queryKey: ["viagem_eventos", tenant, viagemId],
     enabled: !!viagemId && !!tenant,
     queryFn: () => (viagemId ? fetchMotoristaViagemEventos(tenant, viagemId) : []),
-    staleTime: 15_000,
+    ...motoristaQueryOptions,
   });
 }
 
 export function useMotoristaViagemOcorrencias(viagemId: UUID | undefined) {
-  const tenant = useActiveTenantId();
+  const tenant = useMotoristaTenantId();
   return useQuery({
     queryKey: ["viagem_ocorrencias", tenant, viagemId],
     enabled: !!viagemId && !!tenant,
     queryFn: () => (viagemId ? fetchMotoristaViagemOcorrencias(tenant, viagemId) : []),
-    staleTime: 15_000,
+    ...motoristaQueryOptions,
   });
 }
 
 export function useMotoristaViagemLocalizacoes(viagemId: UUID | undefined) {
-  const tenant = useActiveTenantId();
+  const tenant = useMotoristaTenantId();
   return useQuery({
     queryKey: ["viagem_localizacoes", tenant, viagemId],
     enabled: !!viagemId && !!tenant,
     queryFn: () => (viagemId ? fetchMotoristaViagemLocalizacoes(tenant, viagemId) : []),
-    staleTime: 10_000,
+    ...motoristaQueryOptions,
   });
 }
 

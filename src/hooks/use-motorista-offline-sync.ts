@@ -49,10 +49,16 @@ export function useMotoristaOfflineSync() {
         }
       })();
     };
+
     const onOffline = () => {
       setOnline(false);
-      toast.warning("Sem conexão — alterações serão enviadas ao reconectar");
+      const session = getMotoristaSession();
+      if (session) {
+        void loadMotoristaCacheIntoQueries(qc, session.transportadoraId);
+      }
+      toast.warning("Modo offline — usando dados salvos no aparelho");
     };
+
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
     return () => {

@@ -16,7 +16,7 @@ export function MotoristaViagemCard({ viagem }: Props) {
   const statusLabel = STATUS_VIAGEM.find((s) => s.value === viagem.status)?.label ?? viagem.status;
 
   return (
-    <Link to="/motorista/viagens/$id" params={{ id: viagem.id }} className="block">
+    <Link to="/motorista/viagens/$id" params={{ id: viagem.id }} preload={false} className="block">
       <Card className="transition-colors hover:bg-accent/30 active:scale-[0.99]">
         <CardContent className="p-4 flex items-start gap-3">
           <div className="flex-1 min-w-0 space-y-2">
