@@ -149,8 +149,8 @@ function Dashboard() {
                 to="/viagens/$id"
                 params={{ id: v.id }}
                 className={cn(
-                  "flex items-center justify-between rounded-md border border-l-4 p-3 hover:bg-muted/50 transition-colors",
-                  getViagemStatusStyle(v.status).accent,
+                  "flex items-center justify-between rounded-md border p-3 hover:bg-muted/50 transition-colors",
+                  getViagemStatusStyle(v.status).accentLeft,
                 )}
               >
                 <div>

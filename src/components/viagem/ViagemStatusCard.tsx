@@ -8,22 +8,22 @@ type Props = {
   status: StatusViagem | string;
   children: ReactNode;
   className?: string;
-  /** Barra colorida à esquerda (listas) */
-  accent?: boolean;
+  /** Barra colorida na borda: `true` ou `"right"` = direita (motorista); `"left"` = esquerda */
+  accent?: boolean | "left" | "right";
 };
 
-/** Card com fundo/borda na cor do status da viagem. */
+/** Card neutro com barra colorida opcional na borda. */
 export function ViagemStatusCard({ status, children, className, accent }: Props) {
   const style = getViagemStatusStyle(status);
+  const accentClass =
+    accent === "left"
+      ? style.accentLeft
+      : accent === true || accent === "right"
+        ? style.accentRight
+        : undefined;
+
   return (
-    <Card
-      className={cn(
-        "border-2 shadow-sm",
-        style.card,
-        accent && cn("border-l-4", style.accent),
-        className,
-      )}
-    >
+    <Card className={cn(style.card, accentClass, className)}>
       {children}
     </Card>
   );
