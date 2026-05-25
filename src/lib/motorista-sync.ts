@@ -6,6 +6,7 @@ import {
   persistViagemOcorrencia,
   persistViagemLocalizacao,
 } from "@/data/store";
+import { commitMotoristaOpsToCache, patchMotoristaViagemInQueries } from "@/lib/motorista-cache-commit";
 import { invalidateMotoristaData } from "@/lib/motorista-invalidate";
 import { getMotoristaSession } from "@/lib/motorista-session";
 import {
@@ -20,6 +21,7 @@ import {
 } from "@/lib/motorista-offline-queue";
 
 import { isMotoristaOnline } from "@/lib/motorista-online";
+import { refreshMotoristaSnapshotFromNetwork } from "@/lib/motorista-cache-sync";
 
 export type SyncResult = "synced" | "queued";
 export { isMotoristaOnline };
@@ -95,7 +97,22 @@ export async function flushMotoristaOfflineQueue(qc: QueryClient): Promise<numbe
     }
   }
 
-  invalidateMotoristaData(qc);
+  if (isMotoristaOnline()) {
+    const session = getMotoristaSession();
+    if (session) {
+      const refreshed = await refreshMotoristaSnapshotFromNetwork(
+        session.transportadoraId,
+        session.motoristaId,
+      );
+      if (refreshed.ok) {
+        patchMotoristaQueriesFromCache(qc, refreshed.cache);
+      } else {
+        invalidateMotoristaData(qc);
+      }
+    }
+  } else {
+    invalidateMotoristaData(qc);
+  }
   return synced;
 }
 
@@ -124,7 +141,8 @@ export async function motoristaSyncViagemComEvento(
 
   try {
     await withTimeout(persistViagemEvento(evento));
-    invalidateMotoristaData(qc);
+    await commitMotoristaOpsToCache(qc, ops);
+    patchMotoristaViagemInQueries(qc, viagem);
     return "synced";
   } catch {
     await queueAndCache({ id: evento.id, type: "viagem_evento", record: evento }, qc);
@@ -143,7 +161,8 @@ async function persistOrQueue(
 
   try {
     await applyOp(op as MotoristaOfflineOperation);
-    invalidateMotoristaData(qc);
+    await commitMotoristaOpsToCache(qc, [op]);
+    if (op.type === "viagem") patchMotoristaViagemInQueries(qc, op.record);
     return "synced";
   } catch {
     await queueAndCache(op, qc);
@@ -210,7 +229,8 @@ export async function motoristaRegistrarOcorrencia(
 
   try {
     await persistOcorrenciaCompleta(input);
-    invalidateMotoristaData(qc);
+    await commitMotoristaOpsToCache(qc, ops);
+    if (input.viagemAtualizada) patchMotoristaViagemInQueries(qc, input.viagemAtualizada);
     return "synced";
   } catch {
     for (const op of ops) await queueAndCache(op, qc);

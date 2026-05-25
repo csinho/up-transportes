@@ -5,6 +5,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { useActiveTenantId } from "@/data/store";
 import { useAuthSession } from "@/hooks/use-auth-session";
+import { isMotoristaAppPath } from "@/lib/motorista-app-path";
 
 const REALTIME_TABLES = [
   "viagens",
@@ -56,8 +57,9 @@ function attachOperacaoChannel(
       onResubscribe();
     }
     if (status === "TIMED_OUT" || status === "CLOSED") {
-      console.warn("[Realtime] Canal desconectado — reconectando…");
-      onResubscribe();
+      if (document.visibilityState === "visible") {
+        onResubscribe();
+      }
     }
   });
 
@@ -76,6 +78,12 @@ export function useOperacaoRealtime() {
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      isMotoristaAppPath(window.location.pathname)
+    ) {
+      return;
+    }
     if (!isSupabaseConfigured() || !tenant || loading || !session) return;
 
     const supabase = getSupabaseClient();

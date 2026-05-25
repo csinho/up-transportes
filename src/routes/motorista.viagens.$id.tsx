@@ -49,7 +49,13 @@ function Page() {
   const [form, setForm] = useState<Viagem | null>(null);
 
   useEffect(() => {
-    if (viagem) setForm(viagem);
+    if (!viagem) return;
+    setForm((prev) => {
+      if (!prev || prev.id !== viagem.id) return viagem;
+      const prevAt = new Date(prev.updated_at).getTime();
+      const nextAt = new Date(viagem.updated_at).getTime();
+      return nextAt >= prevAt ? viagem : prev;
+    });
   }, [viagem]);
 
   useViagemGeolocalizacao({

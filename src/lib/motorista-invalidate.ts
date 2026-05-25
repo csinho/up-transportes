@@ -19,6 +19,9 @@ function invalidateRecursosQueries(qc: QueryClient) {
   void qc.invalidateQueries({ queryKey: ["viagens"], ...opts });
   void qc.invalidateQueries({ queryKey: ["motoristas"], ...opts });
   void qc.invalidateQueries({ queryKey: ["veiculos"], ...opts });
+  void qc.invalidateQueries({ queryKey: ["viagem_eventos"], ...opts });
+  void qc.invalidateQueries({ queryKey: ["viagem_ocorrencias"], ...opts });
+  void qc.invalidateQueries({ queryKey: ["viagem_localizacoes"], ...opts });
 }
 
 export function invalidateMotoristaData(qc: QueryClient) {
@@ -31,12 +34,10 @@ export function invalidateMotoristaData(qc: QueryClient) {
     return;
   }
 
-  if (session && onMotorista) {
-    patchMotoristaFromIdb(qc, session.transportadoraId);
+  if (session && onMotorista && isMotoristaOnline()) {
+    invalidateRecursosQueries(qc);
+    return;
   }
 
   invalidateRecursosQueries(qc);
-  void qc.invalidateQueries({ queryKey: ["viagem_eventos"], refetchType: "active" });
-  void qc.invalidateQueries({ queryKey: ["viagem_ocorrencias"], refetchType: "active" });
-  void qc.invalidateQueries({ queryKey: ["viagem_localizacoes"], refetchType: "active" });
 }

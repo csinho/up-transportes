@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { ClientOnly } from "@/components/ClientOnly";
 import { MotoristaErrorBoundary } from "@/components/motorista/MotoristaErrorBoundary";
 
 export const Route = createFileRoute("/motorista")({
@@ -18,7 +19,9 @@ export const Route = createFileRoute("/motorista")({
   }),
   component: () => (
     <MotoristaErrorBoundary>
-      <Outlet />
+      <ClientOnly>
+        <Outlet />
+      </ClientOnly>
     </MotoristaErrorBoundary>
   ),
 });

@@ -14,7 +14,10 @@ export async function bootstrapMotoristaPwaOffline(qc: QueryClient): Promise<boo
   }
 
   await syncMotoristaOfflineAuthToServiceWorker(true);
-  await loadMotoristaCacheIntoQueries(qc, session.transportadoraId);
+
+  if (!isMotoristaOnline()) {
+    await loadMotoristaCacheIntoQueries(qc, session.transportadoraId);
+  }
 
   if (isMotoristaOnline()) {
     void runMotoristaOfflineSetup(qc);

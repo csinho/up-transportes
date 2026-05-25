@@ -7,6 +7,7 @@ import { generateUuid } from "@/lib/uuid";
 
 const INTERVALO_MS = 45_000;
 const STATUS_COM_RASTREAMENTO = new Set<Viagem["status"]>([
+  "em_carregamento",
   "em_transito",
   "parada",
   "em_descarga",

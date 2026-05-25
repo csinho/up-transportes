@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import type { Viagem } from "@/types";
+import { requestMotoristaLocationOnce } from "@/lib/motorista-geolocation";
+import { motoristaSyncLocalizacao } from "@/lib/motorista-sync";
 import {
   getAcoesMotorista,
   motoristaPodeFinalizar,
@@ -28,9 +31,33 @@ function toastSync(result: "synced" | "queued", ok: string) {
 }
 
 export function MotoristaViagemAcoes({ viagem, motoristaId, motoristaNome, onUpdated }: Props) {
+  const qc = useQueryClient();
   const { syncViagemComEvento } = useMotoristaSync();
   const [finalizarOpen, setFinalizarOpen] = useState(false);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+
+  const registrarGpsSeDisponivel = async () => {
+    const pos = await requestMotoristaLocationOnce();
+    if (!pos) return;
+    const ts = new Date().toISOString();
+    await motoristaSyncLocalizacao(
+      {
+        id: generateUuid(),
+        transportadora_id: viagem.transportadora_id,
+        viagem_id: viagem.id,
+        motorista_id: motoristaId,
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        velocidade_kmh:
+          pos.coords.speed != null ? Math.max(0, pos.coords.speed * 3.6) : undefined,
+        precisao_metros: pos.coords.accuracy,
+        heading: pos.coords.heading ?? undefined,
+        registrado_em: ts,
+        created_at: ts,
+      },
+      qc,
+    );
+  };
 
   if (!isViagemAtiva(viagem.status)) {
     return (
@@ -58,6 +85,10 @@ export function MotoristaViagemAcoes({ viagem, motoristaId, motoristaNome, onUpd
       };
 
       try {
+        if (acao.id === "iniciar_carregamento" || acao.id === "sair_origem") {
+          await registrarGpsSeDisponivel();
+        }
+
         const result = await syncViagemComEvento(atualizada, {
           id: generateUuid(),
           transportadora_id: viagem.transportadora_id,

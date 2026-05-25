@@ -3,8 +3,9 @@ import { getMotoristaSession } from "@/lib/motorista-session";
 import { requireMotoristaSession } from "@/lib/motorista-auth-route";
 import { loadMotoristaCacheIntoQueries } from "@/lib/motorista-cache-sync";
 import { syncMotoristaOfflineAuthToServiceWorker } from "@/lib/motorista-sw-cache";
+import { isMotoristaOnline } from "@/lib/motorista-online";
 
-/** Hidrata React Query do IndexedDB antes de renderizar telas protegidas. */
+/** Hidrata IndexedDB na UI só quando offline — online usa dados já na memória/rede. */
 export async function hydrateMotoristaCacheBeforeLoad(context: {
   queryClient: QueryClient;
 }): Promise<void> {
@@ -13,5 +14,8 @@ export async function hydrateMotoristaCacheBeforeLoad(context: {
   if (!session) return;
 
   await syncMotoristaOfflineAuthToServiceWorker(true);
-  await loadMotoristaCacheIntoQueries(context.queryClient, session.transportadoraId);
+
+  if (!isMotoristaOnline()) {
+    await loadMotoristaCacheIntoQueries(context.queryClient, session.transportadoraId);
+  }
 }
