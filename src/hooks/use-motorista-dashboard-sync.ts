@@ -8,6 +8,7 @@ import {
 } from "@/lib/motorista-cache-sync";
 import { patchMotoristaQueriesFromCache } from "@/lib/motorista-offline-store";
 import { isMotoristaOnline } from "@/lib/motorista-online";
+import { cacheMotoristaShellInServiceWorker } from "@/lib/motorista-sw-cache";
 
 /**
  * Só no dashboard do motorista: grava snapshot no IndexedDB (online)
@@ -34,6 +35,7 @@ export function useMotoristaDashboardSync() {
         if (result.ok) {
           patchMotoristaQueriesFromCache(qc, result.cache);
           if (isMotoristaOnline()) {
+            await cacheMotoristaShellInServiceWorker();
             toast.success("Dados salvos no aparelho para uso offline");
           }
         } else {
