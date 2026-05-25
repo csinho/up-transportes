@@ -21,15 +21,6 @@ import type {
   PosicaoPneu,
 } from "@/types";
 import { assertDataAccess } from "@/data/store-access";
-import {
-  fetchMotoristaViagens,
-  fetchMotoristaVeiculos,
-  fetchMotoristaClientes,
-  fetchMotoristaViagem,
-  fetchMotoristaViagemEventos,
-  fetchMotoristaViagemOcorrencias,
-  fetchMotoristaViagemLocalizacoes,
-} from "@/lib/motorista-query-offline";
 import * as sb from "@/data/supabase-repository";
 
 type Tables = {
@@ -96,19 +87,18 @@ function useTenantList<K extends keyof Tables>(table: K) {
     queryKey: [table, tenant],
     enabled: !!tenant,
     queryFn: async () => {
+      await assertDataAccess();
       switch (table) {
         case "motoristas":
-          await assertDataAccess();
           return sb.sbListMotoristas(tenant) as Tables[K][];
         case "veiculos":
-          return fetchMotoristaVeiculos(tenant) as Tables[K][];
+          return sb.sbListVeiculos(tenant) as Tables[K][];
         case "clientes":
-          return fetchMotoristaClientes(tenant) as Tables[K][];
+          return sb.sbListClientes(tenant) as Tables[K][];
         case "produtos":
-          await assertDataAccess();
           return sb.sbListProdutos(tenant) as Tables[K][];
         case "viagens":
-          return fetchMotoristaViagens(tenant) as Tables[K][];
+          return sb.sbListViagens(tenant) as Tables[K][];
         default:
           return [] as Tables[K][];
       }
@@ -134,10 +124,8 @@ function useEntity<K extends keyof Tables>(table: K, id: UUID | undefined) {
           return sb.sbGetCliente(id);
         case "produtos":
           return sb.sbGetProduto(id);
-        case "viagens": {
-          const tenant = getActiveTransportadoraId();
-          return fetchMotoristaViagem(id, tenant);
-        }
+        case "viagens":
+          return sb.sbGetViagem(id);
         default:
           return null;
       }
@@ -300,14 +288,14 @@ function useViagemSubList<T extends { transportadora_id: UUID; viagem_id: UUID; 
     queryKey,
     enabled: !!viagemId && !!tenant,
     queryFn: async () => {
+      await assertDataAccess();
       let rows: ViagemEvento[] | ViagemOcorrencia[] | ViagemLocalizacao[];
-      if (!viagemId) return [] as T[];
       if (table === "viagem_eventos") {
-        rows = await fetchMotoristaViagemEventos(tenant, viagemId);
+        rows = await sb.sbListViagemEventos(tenant, viagemId);
       } else if (table === "viagem_ocorrencias") {
-        rows = await fetchMotoristaViagemOcorrencias(tenant, viagemId);
+        rows = await sb.sbListViagemOcorrencias(tenant, viagemId);
       } else {
-        rows = await fetchMotoristaViagemLocalizacoes(tenant, viagemId);
+        rows = await sb.sbListViagemLocalizacoes(tenant, viagemId);
       }
       if (sortFn) rows = [...rows].sort(sortFn as (a: typeof rows[0], b: typeof rows[0]) => number);
       return rows as T[];

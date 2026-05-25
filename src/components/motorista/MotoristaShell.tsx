@@ -7,7 +7,7 @@ import { MotoristaInstalarPwa } from "@/components/motorista/MotoristaInstalarPw
 import { TransportadoraLogo } from "@/components/transportadora/TransportadoraLogo";
 import { useMotoristaSession } from "@/hooks/use-motorista-session";
 import { useMotoristaOfflineSync } from "@/hooks/use-motorista-offline-sync";
-import { useMotoristaCacheBootstrap } from "@/hooks/use-motorista-cache-bootstrap";
+import { useMotoristaQueueBootstrap } from "@/hooks/use-motorista-cache-bootstrap";
 import { registerMotoristaServiceWorker } from "@/lib/register-motorista-sw";
 import type { UUID } from "@/types";
 import { cn } from "@/lib/utils";
@@ -30,7 +30,7 @@ export function MotoristaShell({
 }: Props) {
   const { session, logout } = useMotoristaSession();
   const { online, pending } = useMotoristaOfflineSync();
-  useMotoristaCacheBootstrap();
+  useMotoristaQueueBootstrap();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const transportadoraId = session?.transportadoraId ?? transportadoraIdProp;

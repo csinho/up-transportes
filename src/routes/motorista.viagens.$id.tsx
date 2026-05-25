@@ -1,14 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
+import { useActiveTenantId } from "@/data/store";
 import {
-  useViagem,
-  useViagemLocalizacoes,
-  useViagemEventos,
-  useViagemOcorrencias,
-  useVeiculos,
-  useClientes,
-  useActiveTenantId,
-} from "@/data/store";
+  useMotoristaViagem,
+  useMotoristaViagemLocalizacoes,
+  useMotoristaViagemEventos,
+  useMotoristaViagemOcorrencias,
+  useMotoristaVeiculos,
+  useMotoristaClientes,
+} from "@/hooks/use-motorista-data";
 import { MotoristaShell } from "@/components/motorista/MotoristaShell";
 import { MotoristaViagemAcoes } from "@/components/motorista/MotoristaViagemAcoes";
 import { MotoristaOcorrenciasCard } from "@/components/motorista/MotoristaOcorrenciasCard";
@@ -38,12 +38,12 @@ function Page() {
   const { id } = Route.useParams();
   const { session } = useMotoristaSession();
   const tenantId = useActiveTenantId();
-  const { data: viagem } = useViagem(id);
-  const { data: localizacoes = [] } = useViagemLocalizacoes(id);
-  const { data: eventos = [] } = useViagemEventos(id);
-  const { data: ocorrencias = [] } = useViagemOcorrencias(id);
-  const { data: veiculos = [] } = useVeiculos();
-  const { data: clientes = [] } = useClientes();
+  const { data: viagem } = useMotoristaViagem(id);
+  const { data: localizacoes = [] } = useMotoristaViagemLocalizacoes(id);
+  const { data: eventos = [] } = useMotoristaViagemEventos(id);
+  const { data: ocorrencias = [] } = useMotoristaViagemOcorrencias(id);
+  const { data: veiculos = [] } = useMotoristaVeiculos();
+  const { data: clientes = [] } = useMotoristaClientes();
   const [form, setForm] = useState<Viagem | null>(null);
 
   useEffect(() => {

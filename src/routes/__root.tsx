@@ -150,7 +150,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <SupabaseRequired>
-        <OperacaoRealtimeBridge />
+        {!isMotoristaAppPath(pathname) && <OperacaoRealtimeBridge />}
         {isPublic ? (
           <>
             <Outlet />

@@ -11,54 +11,98 @@ import {
   type MotoristaOfflineCache,
 } from "@/lib/motorista-offline-store";
 
-/** Baixa dados do Supabase e grava snapshot no IndexedDB. */
+export type MotoristaSnapshotResult =
+  | { ok: true; cache: MotoristaOfflineCache }
+  | { ok: false; error: string };
+
+/** Baixa dados do Supabase e grava snapshot completo no IndexedDB (somente app motorista). */
 export async function refreshMotoristaSnapshotFromNetwork(
   tenantId: UUID,
   motoristaId: UUID,
-): Promise<MotoristaOfflineCache> {
-  await assertDataAccess();
+): Promise<MotoristaSnapshotResult> {
+  try {
+    await assertDataAccess();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Sessão inválida";
+    return { ok: false, error: msg };
+  }
 
-  const [viagens, veiculos, clientes, viagemEventos, viagemOcorrencias, viagemLocalizacoes] =
-    await Promise.all([
-      sb.sbListViagens(tenantId),
-      sb.sbListVeiculos(tenantId),
-      sb.sbListClientes(tenantId),
-      sb.sbListViagemEventos(tenantId),
-      sb.sbListViagemOcorrencias(tenantId),
-      sb.sbListViagemLocalizacoes(tenantId),
-    ]);
+  const base = emptyMotoristaCache(tenantId, motoristaId);
+  const errors: string[] = [];
 
-  const cache: MotoristaOfflineCache = {
-    version: 1,
-    tenantId,
-    motoristaId,
-    savedAt: new Date().toISOString(),
-    viagens,
-    veiculos,
-    clientes,
-    viagemEventos,
-    viagemOcorrencias,
-    viagemLocalizacoes,
-  };
+  const [viagensR, veiculosR, clientesR, eventosR, ocorrenciasR, locR] = await Promise.allSettled([
+    sb.sbListViagens(tenantId),
+    sb.sbListVeiculos(tenantId),
+    sb.sbListClientes(tenantId),
+    sb.sbListViagemEventos(tenantId),
+    sb.sbListViagemOcorrencias(tenantId),
+    sb.sbListViagemLocalizacoes(tenantId),
+  ]);
 
-  await saveMotoristaCache(cache);
-  return cache;
+  if (viagensR.status === "fulfilled") base.viagens = viagensR.value;
+  else errors.push(`viagens: ${reasonMessage(viagensR.reason)}`);
+
+  if (veiculosR.status === "fulfilled") base.veiculos = veiculosR.value;
+  else errors.push(`veículos: ${reasonMessage(veiculosR.reason)}`);
+
+  if (clientesR.status === "fulfilled") base.clientes = clientesR.value;
+  else errors.push(`clientes: ${reasonMessage(clientesR.reason)}`);
+
+  if (eventosR.status === "fulfilled") base.viagemEventos = eventosR.value;
+  else errors.push(`eventos: ${reasonMessage(eventosR.reason)}`);
+
+  if (ocorrenciasR.status === "fulfilled") base.viagemOcorrencias = ocorrenciasR.value;
+  else errors.push(`ocorrências: ${reasonMessage(ocorrenciasR.reason)}`);
+
+  if (locR.status === "fulfilled") base.viagemLocalizacoes = locR.value;
+  else errors.push(`localizações: ${reasonMessage(locR.reason)}`);
+
+  if (base.viagens.length === 0 && errors.length > 0) {
+    return { ok: false, error: errors.join("; ") };
+  }
+
+  base.savedAt = new Date().toISOString();
+  await saveMotoristaCache(base);
+
+  console.info(
+    `[motorista-offline] IndexedDB atualizado: ${base.viagens.length} viagem(ns), fila pronta para sync.`,
+  );
+
+  if (errors.length > 0) {
+    console.warn("[motorista-offline] Snapshot parcial:", errors.join("; "));
+  }
+
+  return { ok: true, cache: base };
 }
 
-export async function hydrateMotoristaQueries(
+function reasonMessage(reason: unknown): string {
+  return reason instanceof Error ? reason.message : String(reason);
+}
+
+/** Lê cache local para a UI (sem baixar de novo). */
+export async function loadMotoristaCacheIntoQueries(
+  qc: QueryClient,
+  tenantId: UUID,
+): Promise<boolean> {
+  const cached = await getMotoristaCache(tenantId);
+  if (!cached) return false;
+  patchMotoristaQueriesFromCache(qc, cached);
+  return true;
+}
+
+/** Dashboard: cache local + snapshot online quando possível. */
+export async function syncMotoristaDashboardCache(
   qc: QueryClient,
   tenantId: UUID,
   motoristaId: UUID,
-): Promise<void> {
-  const cached = await getMotoristaCache(tenantId);
-  if (cached) patchMotoristaQueriesFromCache(qc, cached);
+): Promise<MotoristaSnapshotResult | null> {
+  await loadMotoristaCacheIntoQueries(qc, tenantId);
 
-  if (isMotoristaOnline()) {
-    try {
-      const fresh = await refreshMotoristaSnapshotFromNetwork(tenantId, motoristaId);
-      patchMotoristaQueriesFromCache(qc, fresh);
-    } catch (err) {
-      console.warn("[motorista] Falha ao atualizar cache online:", err);
-    }
+  if (!isMotoristaOnline()) {
+    const cached = await getMotoristaCache(tenantId);
+    if (cached) return { ok: true, cache: cached };
+    return { ok: false, error: "Sem internet e sem dados salvos no aparelho." };
   }
+
+  return refreshMotoristaSnapshotFromNetwork(tenantId, motoristaId);
 }

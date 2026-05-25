@@ -10,7 +10,6 @@ import { useMotoristaSession } from "@/hooks/use-motorista-session";
 import { loginMotoristaPorCpf } from "@/lib/supabase/motorista-auth";
 import { traduzirErroSupabase } from "@/lib/supabase/traduzir-erro";
 import { persistMotoristaBrandingTenant } from "@/lib/motorista-tenant";
-import { hydrateMotoristaQueries } from "@/lib/motorista-cache-sync";
 import { toast } from "sonner";
 import { LogIn } from "lucide-react";
 
@@ -39,7 +38,7 @@ export function MotoristaLoginForm({ onSuccess }: Props) {
           cpf,
         });
         persistMotoristaBrandingTenant(auth.transportadoraId);
-        await hydrateMotoristaQueries(qc, auth.transportadoraId, auth.motoristaId);
+        await qc.invalidateQueries();
         toast.success(`Bem-vindo, ${auth.nome.split(" ")[0]}!`);
         onSuccess?.();
         void navigate({ to: "/motorista/dashboard", replace: true });

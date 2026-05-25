@@ -38,7 +38,8 @@ export async function idbPut<T extends { tenantId?: string; id?: string }>(
   const db = await openDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(store, "readwrite");
-    tx.objectStore(store).put(value);
+    const req = tx.objectStore(store).put(value);
+    req.onerror = () => reject(req.error ?? new Error("idb put request"));
     tx.oncomplete = () => {
       db.close();
       resolve();

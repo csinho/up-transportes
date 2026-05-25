@@ -2,7 +2,11 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { flushMotoristaOfflineQueue } from "@/lib/motorista-sync";
-import { hydrateMotoristaQueries } from "@/lib/motorista-cache-sync";
+import {
+  loadMotoristaCacheIntoQueries,
+  refreshMotoristaSnapshotFromNetwork,
+} from "@/lib/motorista-cache-sync";
+import { patchMotoristaQueriesFromCache } from "@/lib/motorista-offline-store";
 import { getMotoristaSession } from "@/lib/motorista-session";
 import {
   getOfflineQueueCount,
@@ -28,7 +32,15 @@ export function useMotoristaOfflineSync() {
         const n = await flushMotoristaOfflineQueue(qc);
         const session = getMotoristaSession();
         if (session) {
-          await hydrateMotoristaQueries(qc, session.transportadoraId, session.motoristaId);
+          const refreshed = await refreshMotoristaSnapshotFromNetwork(
+            session.transportadoraId,
+            session.motoristaId,
+          );
+          if (refreshed.ok) {
+            patchMotoristaQueriesFromCache(qc, refreshed.cache);
+          } else {
+            await loadMotoristaCacheIntoQueries(qc, session.transportadoraId);
+          }
         }
         if (n > 0) {
           toast.success(`${n} registro${n > 1 ? "s" : ""} sincronizado${n > 1 ? "s" : ""}`);

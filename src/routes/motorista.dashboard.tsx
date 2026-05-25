@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { useViagens } from "@/data/store";
+import { useMotoristaViagens } from "@/hooks/use-motorista-data";
+import { useMotoristaDashboardSync } from "@/hooks/use-motorista-dashboard-sync";
 import { MotoristaShell } from "@/components/motorista/MotoristaShell";
 import { MotoristaDashboardResumo } from "@/components/motorista/MotoristaDashboardResumo";
 import { MotoristaViagemDestaque } from "@/components/motorista/MotoristaViagemDestaque";
@@ -18,7 +19,8 @@ export const Route = createFileRoute("/motorista/dashboard")({
 
 function Page() {
   const { session } = useMotoristaSession();
-  const { data: viagens = [] } = useViagens();
+  useMotoristaDashboardSync();
+  const { data: viagens = [] } = useMotoristaViagens();
 
   const resumo = useMemo(() => {
     if (!session) return null;

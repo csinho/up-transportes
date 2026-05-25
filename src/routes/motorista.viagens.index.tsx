@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useViagens } from "@/data/store";
+import { useMotoristaViagens } from "@/hooks/use-motorista-data";
 import { MotoristaShell } from "@/components/motorista/MotoristaShell";
 import { MotoristaViagemCard } from "@/components/motorista/MotoristaViagemCard";
 import { useMotoristaSession } from "@/hooks/use-motorista-session";
@@ -17,7 +17,7 @@ export const Route = createFileRoute("/motorista/viagens/")({
 
 function Page() {
   const { session } = useMotoristaSession();
-  const { data: viagens = [] } = useViagens();
+  const { data: viagens = [] } = useMotoristaViagens();
   const [aba, setAba] = useState("ativas");
 
   const { ativas, concluidas, todas } = useMemo(() => {

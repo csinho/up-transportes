@@ -1,7 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { getMotoristaSession } from "@/lib/motorista-session";
 import { isMotoristaOnline } from "@/lib/motorista-online";
-import { isMotoristaDataContext } from "@/lib/motorista-data-context";
+import { isMotoristaAppPath } from "@/lib/motorista-app-path";
 import {
   getMotoristaCache,
   patchMotoristaQueriesFromCache,
@@ -15,7 +15,9 @@ function invalidateRecursosQueries(qc: QueryClient) {
 
 export function invalidateMotoristaData(qc: QueryClient) {
   const session = getMotoristaSession();
-  if (session && isMotoristaDataContext() && !isMotoristaOnline()) {
+  const onMotorista =
+    typeof window !== "undefined" && isMotoristaAppPath(window.location.pathname);
+  if (session && onMotorista && !isMotoristaOnline()) {
     void (async () => {
       const cache = await getMotoristaCache(session.transportadoraId);
       if (cache) patchMotoristaQueriesFromCache(qc, cache);
