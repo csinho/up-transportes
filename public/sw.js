@@ -1,7 +1,7 @@
 /**
  * PWA motorista — cache do shell + roteamento offline quando já logado.
  */
-const CACHE_VERSION = "transpo-motorista-v4";
+const CACHE_VERSION = "transpo-motorista-v5";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const AUTH_DB = "erp_transp_motorista_sw_auth_v1";
@@ -26,6 +26,19 @@ function isMotoristaPath(pathname) {
 
 function isMotoristaEntry(pathname) {
   return pathname === "/motorista" || pathname === "/motorista/";
+}
+
+function isMotoristaRelatedAsset(pathname) {
+  if (!pathname.startsWith("/assets/")) return false;
+  const lower = pathname.toLowerCase();
+  return (
+    lower.includes("motorista") ||
+    lower.includes("motoristashell") ||
+    lower.includes("use-motorista-data") ||
+    lower.includes("viagemprogresso") ||
+    lower.includes("viagemeventos") ||
+    lower.includes("viagem-progresso")
+  );
 }
 
 function isAppAsset(pathname) {
@@ -161,6 +174,22 @@ async function staleWhileRevalidate(request) {
   return cached || network || (await network);
 }
 
+/** Offline: chunks do motorista já visitados — cache primeiro. */
+async function cacheFirstAsset(request) {
+  const runtime = await caches.open(RUNTIME_CACHE);
+  const cached = await caches.match(request);
+  if (cached) return cached;
+  try {
+    const response = await fetch(request);
+    if (response.ok) await runtime.put(request, response.clone());
+    return response;
+  } catch {
+    const fallback = await caches.match(request);
+    if (fallback) return fallback;
+    throw new Error("offline");
+  }
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
@@ -209,7 +238,10 @@ self.addEventListener("message", (event) => {
     return;
   }
 
-  if (data.type === "CACHE_MOTORISTA_ROUTES" && Array.isArray(data.urls)) {
+  if (
+    (data.type === "CACHE_MOTORISTA_ROUTES" || data.type === "CACHE_MOTORISTA_ASSETS") &&
+    Array.isArray(data.urls)
+  ) {
     event.waitUntil(cacheUrls(data.urls));
   }
 });
@@ -220,7 +252,11 @@ self.addEventListener("fetch", (event) => {
   if (!shouldHandle(url, request)) return;
 
   if (isAppAsset(url.pathname)) {
-    event.respondWith(staleWhileRevalidate(request));
+    event.respondWith(
+      isMotoristaRelatedAsset(url.pathname)
+        ? cacheFirstAsset(request)
+        : staleWhileRevalidate(request),
+    );
     return;
   }
 

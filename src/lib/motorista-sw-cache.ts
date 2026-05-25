@@ -24,3 +24,17 @@ export async function syncMotoristaOfflineAuthToServiceWorker(loggedIn: boolean)
 export async function cacheMotoristaShellInServiceWorker(): Promise<void> {
   await syncMotoristaOfflineAuthToServiceWorker(true);
 }
+
+/** Grava chunks JS/CSS do motorista no cache do Service Worker. */
+export async function cacheMotoristaAssetsInServiceWorker(urls: string[]): Promise<void> {
+  if (typeof window === "undefined" || !("serviceWorker" in navigator) || urls.length === 0) {
+    return;
+  }
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    reg.active?.postMessage({ type: "CACHE_MOTORISTA_ASSETS", urls });
+  } catch (err) {
+    console.warn("[PWA] Falha ao cachear assets do motorista no SW:", err);
+  }
+}

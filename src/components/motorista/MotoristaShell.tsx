@@ -134,7 +134,7 @@ export function MotoristaShell({
                 <Link
                   key={item.to}
                   to={item.to}
-                  preload={false}
+                  preload="intent"
                   className={cn(
                     "flex-1 flex flex-col items-center gap-1 py-2.5 text-xs transition-colors",
                     active ? "text-primary font-medium" : "text-muted-foreground",

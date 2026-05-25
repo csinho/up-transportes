@@ -9,6 +9,7 @@ import {
 } from "@/lib/motorista-session";
 import { logoutMotoristaSupabase } from "@/lib/supabase/motorista-auth";
 import { syncMotoristaOfflineAuthToServiceWorker } from "@/lib/motorista-sw-cache";
+import { resetMotoristaChunkPrefetch } from "@/lib/motorista-chunk-prefetch";
 
 function readSession(): MotoristaSession | null {
   if (typeof window === "undefined") return null;
@@ -56,6 +57,7 @@ export function useMotoristaSession() {
   }, [loginWithAuth]);
 
   const logout = useCallback(() => {
+    resetMotoristaChunkPrefetch();
     void logoutMotoristaSupabase();
     clearMotoristaSession();
     setSession(null);

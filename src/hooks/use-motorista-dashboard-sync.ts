@@ -9,6 +9,7 @@ import {
 import { patchMotoristaQueriesFromCache } from "@/lib/motorista-offline-store";
 import { isMotoristaOnline } from "@/lib/motorista-online";
 import { cacheMotoristaShellInServiceWorker } from "@/lib/motorista-sw-cache";
+import { prefetchMotoristaOfflineChunks } from "@/lib/motorista-chunk-prefetch";
 
 /**
  * Dashboard: hidrata cache local sempre; snapshot na rede só uma vez por sessão online.
@@ -42,6 +43,7 @@ export function useMotoristaDashboardSync() {
         if (result.ok) {
           patchMotoristaQueriesFromCache(qc, result.cache);
           await cacheMotoristaShellInServiceWorker();
+          await prefetchMotoristaOfflineChunks(true);
           toast.success("Dados salvos no aparelho para uso offline");
         } else {
           console.error("[motorista-offline] Falha no snapshot:", result.error);
