@@ -1,9 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { getMotoristaSession } from "@/lib/motorista-session";
-import { loadMotoristaCacheIntoQueries } from "@/lib/motorista-cache-sync";
+import { bootstrapMotoristaPwaOffline } from "@/lib/motorista-pwa-bootstrap";
 import { MotoristaShell } from "@/components/motorista/MotoristaShell";
 import { MotoristaInstalarPwa } from "@/components/motorista/MotoristaInstalarPwa";
 import { MotoristaLoginForm } from "@/components/motorista/MotoristaLoginForm";
@@ -30,18 +30,32 @@ function Page() {
   const transportadoraId = resolveMotoristaBrandingTenantId(t);
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const [redirecionando, setRedirecionando] = useState(() => !!getMotoristaSession());
 
   useEffect(() => {
     if (isValidTransportadoraId(t)) persistMotoristaBrandingTenant(t);
   }, [t]);
 
-  /** Sessão local: pula login ao reabrir o PWA offline (beforeLoad pode não ver storage no SSR). */
-  useEffect(() => {
+  useLayoutEffect(() => {
     const session = getMotoristaSession();
-    if (!session) return;
-    void loadMotoristaCacheIntoQueries(qc, session.transportadoraId);
-    void navigate({ to: "/motorista/dashboard", replace: true });
+    if (!session) {
+      setRedirecionando(false);
+      return;
+    }
+    setRedirecionando(true);
+    void (async () => {
+      await bootstrapMotoristaPwaOffline(qc);
+      void navigate({ to: "/motorista/dashboard", replace: true });
+    })();
   }, [navigate, qc]);
+
+  if (redirecionando) {
+    return (
+      <MotoristaShell titulo="Entrar" auth transportadoraId={transportadoraId}>
+        <p className="text-sm text-muted-foreground text-center pt-12">Abrindo suas viagens…</p>
+      </MotoristaShell>
+    );
+  }
 
   return (
     <MotoristaShell titulo="Entrar" auth transportadoraId={transportadoraId}>

@@ -8,6 +8,7 @@ import {
   type MotoristaSession,
 } from "@/lib/motorista-session";
 import { logoutMotoristaSupabase } from "@/lib/supabase/motorista-auth";
+import { syncMotoristaOfflineAuthToServiceWorker } from "@/lib/motorista-sw-cache";
 
 function readSession(): MotoristaSession | null {
   if (typeof window === "undefined") return null;
@@ -40,6 +41,7 @@ export function useMotoristaSession() {
       setMotoristaSession(next);
       setSession(next);
       window.dispatchEvent(new Event("motorista-session"));
+      void syncMotoristaOfflineAuthToServiceWorker(true);
     },
     [],
   );
@@ -58,6 +60,7 @@ export function useMotoristaSession() {
     clearMotoristaSession();
     setSession(null);
     window.dispatchEvent(new Event("motorista-session"));
+    void syncMotoristaOfflineAuthToServiceWorker(false);
   }, []);
 
   return { session, login, loginWithAuth, logout, isLoggedIn: !!session };

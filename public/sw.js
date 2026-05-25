@@ -1,17 +1,20 @@
 /**
- * PWA motorista — cache do shell (HTML/JS/CSS) para abrir offline.
- * Dados de negócio ficam no IndexedDB (app React).
+ * PWA motorista — cache do shell + roteamento offline quando já logado.
  */
-const CACHE_VERSION = "transpo-motorista-v3";
+const CACHE_VERSION = "transpo-motorista-v4";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
+const AUTH_DB = "erp_transp_motorista_sw_auth_v1";
+const AUTH_STORE = "meta";
 
 const PRECACHE_URLS = [
-  "/motorista",
   "/motorista/dashboard",
   "/motorista/viagens",
+  "/motorista",
   "/manifest.webmanifest",
 ];
+
+const SHELL_URLS = ["/motorista", "/motorista/dashboard", "/motorista/viagens"];
 
 function isSameOrigin(url) {
   return url.origin === self.location.origin;
@@ -19,6 +22,10 @@ function isSameOrigin(url) {
 
 function isMotoristaPath(pathname) {
   return pathname === "/motorista" || pathname.startsWith("/motorista/");
+}
+
+function isMotoristaEntry(pathname) {
+  return pathname === "/motorista" || pathname === "/motorista/";
 }
 
 function isAppAsset(pathname) {
@@ -40,6 +47,43 @@ function shouldHandle(url, request) {
   return isMotoristaPath(url.pathname) || isAppAsset(url.pathname);
 }
 
+function openAuthDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(AUTH_DB, 1);
+    req.onupgradeneeded = () => {
+      if (!req.result.objectStoreNames.contains(AUTH_STORE)) {
+        req.result.createObjectStore(AUTH_STORE);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function getMotoristaLoggedIn() {
+  try {
+    const db = await openAuthDb();
+    return new Promise((resolve) => {
+      const tx = db.transaction(AUTH_STORE, "readonly");
+      const req = tx.objectStore(AUTH_STORE).get("loggedIn");
+      req.onsuccess = () => resolve(req.result === true);
+      req.onerror = () => resolve(false);
+    });
+  } catch {
+    return false;
+  }
+}
+
+async function setMotoristaLoggedIn(value) {
+  const db = await openAuthDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(AUTH_STORE, "readwrite");
+    tx.objectStore(AUTH_STORE).put(!!value, "loggedIn");
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 async function cacheUrls(urls) {
   const cache = await caches.open(RUNTIME_CACHE);
   await Promise.allSettled(
@@ -48,6 +92,73 @@ async function cacheUrls(urls) {
       if (res.ok) await cache.put(path, res);
     }),
   );
+}
+
+async function matchCachedPath(paths) {
+  for (const path of paths) {
+    const hit =
+      (await caches.match(path)) || (await caches.match(path, { ignoreSearch: true }));
+    if (hit) return hit;
+  }
+  return undefined;
+}
+
+async function resolveOfflineNavigation(request) {
+  const url = new URL(request.url);
+  const loggedIn = await getMotoristaLoggedIn();
+
+  if (loggedIn && isMotoristaEntry(url.pathname)) {
+    const dash = await matchCachedPath(["/motorista/dashboard", "/motorista/viagens"]);
+    if (dash) return dash;
+  }
+
+  const exact = await caches.match(request);
+  if (exact) return exact;
+
+  if (loggedIn) {
+    const dash = await matchCachedPath(["/motorista/dashboard", url.pathname, "/motorista"]);
+    if (dash) return dash;
+  }
+
+  return matchCachedPath([url.pathname, "/motorista/dashboard", "/motorista"]);
+}
+
+async function networkFirstNavigation(request) {
+  const runtime = await caches.open(RUNTIME_CACHE);
+  try {
+    const response = await fetch(request);
+    if (response.ok) await runtime.put(request, response.clone());
+    return response;
+  } catch {
+    const offline = await resolveOfflineNavigation(request);
+    if (offline) return offline;
+    throw new Error("offline");
+  }
+}
+
+async function networkFirstWithCache(request) {
+  const runtime = await caches.open(RUNTIME_CACHE);
+  try {
+    const response = await fetch(request);
+    if (response.ok) await runtime.put(request, response.clone());
+    return response;
+  } catch {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    throw new Error("offline");
+  }
+}
+
+async function staleWhileRevalidate(request) {
+  const runtime = await caches.open(RUNTIME_CACHE);
+  const cached = await caches.match(request);
+  const network = fetch(request)
+    .then((res) => {
+      if (res.ok) runtime.put(request, res.clone());
+      return res;
+    })
+    .catch(() => null);
+  return cached || network || (await network);
 }
 
 self.addEventListener("install", (event) => {
@@ -74,7 +185,7 @@ self.addEventListener("activate", (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((k) => !k.startsWith(CACHE_VERSION))
+            .filter((k) => !k.startsWith(CACHE_VERSION) && k !== AUTH_DB)
             .map((k) => caches.delete(k)),
         ),
       )
@@ -84,42 +195,24 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("message", (event) => {
   const data = event.data;
-  if (data?.type === "CACHE_MOTORISTA_ROUTES" && Array.isArray(data.urls)) {
+  if (!data?.type) return;
+
+  if (data.type === "MOTORISTA_OFFLINE_AUTH") {
+    event.waitUntil(
+      (async () => {
+        await setMotoristaLoggedIn(!!data.loggedIn);
+        if (data.loggedIn && Array.isArray(data.urls)) {
+          await cacheUrls(data.urls);
+        }
+      })(),
+    );
+    return;
+  }
+
+  if (data.type === "CACHE_MOTORISTA_ROUTES" && Array.isArray(data.urls)) {
     event.waitUntil(cacheUrls(data.urls));
   }
 });
-
-async function networkFirstWithCache(request) {
-  const runtime = await caches.open(RUNTIME_CACHE);
-  try {
-    const response = await fetch(request);
-    if (response.ok) await runtime.put(request, response.clone());
-    return response;
-  } catch {
-    const cached = await caches.match(request);
-    if (cached) return cached;
-    if (request.mode === "navigate") {
-      return (
-        (await caches.match("/motorista/dashboard")) ||
-        (await caches.match("/motorista")) ||
-        (await caches.match("/motorista", { ignoreSearch: true }))
-      );
-    }
-    throw new Error("offline");
-  }
-}
-
-async function staleWhileRevalidate(request) {
-  const runtime = await caches.open(RUNTIME_CACHE);
-  const cached = await caches.match(request);
-  const network = fetch(request)
-    .then((res) => {
-      if (res.ok) runtime.put(request, res.clone());
-      return res;
-    })
-    .catch(() => null);
-  return cached || network || (await network);
-}
 
 self.addEventListener("fetch", (event) => {
   const request = event.request;
@@ -128,6 +221,11 @@ self.addEventListener("fetch", (event) => {
 
   if (isAppAsset(url.pathname)) {
     event.respondWith(staleWhileRevalidate(request));
+    return;
+  }
+
+  if (request.mode === "navigate") {
+    event.respondWith(networkFirstNavigation(request));
     return;
   }
 

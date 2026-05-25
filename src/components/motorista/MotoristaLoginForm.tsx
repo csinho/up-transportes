@@ -13,6 +13,7 @@ import { persistMotoristaBrandingTenant } from "@/lib/motorista-tenant";
 import { isMotoristaOnline } from "@/lib/motorista-online";
 import { tryMotoristaOfflineLogin } from "@/lib/motorista-offline-login";
 import { getMotoristaSession } from "@/lib/motorista-session";
+import { syncMotoristaOfflineAuthToServiceWorker } from "@/lib/motorista-sw-cache";
 import { toast } from "sonner";
 import { LogIn, WifiOff } from "lucide-react";
 
@@ -42,6 +43,7 @@ export function MotoristaLoginForm({ onSuccess }: Props) {
               toast.error(offlineResult.message);
             }
           } else {
+            await syncMotoristaOfflineAuthToServiceWorker(true);
             toast.success(`Bem-vindo de volta, ${offlineResult.session.nome.split(" ")[0]}!`);
             onSuccess?.();
             void navigate({ to: "/motorista/dashboard", replace: true });
@@ -57,6 +59,7 @@ export function MotoristaLoginForm({ onSuccess }: Props) {
           cpf,
         });
         persistMotoristaBrandingTenant(auth.transportadoraId);
+        await syncMotoristaOfflineAuthToServiceWorker(true);
         await qc.invalidateQueries();
         toast.success(`Bem-vindo, ${auth.nome.split(" ")[0]}!`);
         onSuccess?.();

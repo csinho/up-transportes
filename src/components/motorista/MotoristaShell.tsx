@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { bootstrapMotoristaPwaOffline } from "@/lib/motorista-pwa-bootstrap";
 import { Home, List, LogOut, Wifi, WifiOff, CloudOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +33,7 @@ export function MotoristaShell({
   const { session, logout } = useMotoristaSession();
   const { online, pending } = useMotoristaOfflineSync();
   useMotoristaQueueBootstrap();
+  const qc = useQueryClient();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const transportadoraId = session?.transportadoraId ?? transportadoraIdProp;
@@ -38,6 +41,11 @@ export function MotoristaShell({
   useEffect(() => {
     registerMotoristaServiceWorker();
   }, []);
+
+  useEffect(() => {
+    if (!session) return;
+    void bootstrapMotoristaPwaOffline(qc);
+  }, [session?.motoristaId, session?.transportadoraId, qc]);
 
   const sair = () => {
     const tenantId = session?.transportadoraId;

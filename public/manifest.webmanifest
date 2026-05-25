@@ -3,7 +3,7 @@
   "name": "Transpo Motorista",
   "short_name": "Motorista",
   "description": "App do motorista — viagens, rastreamento e entregas",
-  "start_url": "/motorista",
+  "start_url": "/motorista/dashboard",
   "scope": "/motorista",
   "display": "standalone",
   "orientation": "portrait",
