@@ -20,8 +20,16 @@ import type {
   UUID,
   PosicaoPneu,
 } from "@/types";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { requireSupabaseSession } from "@/lib/supabase/session";
+import { assertDataAccess } from "@/data/store-access";
+import {
+  fetchMotoristaViagens,
+  fetchMotoristaVeiculos,
+  fetchMotoristaClientes,
+  fetchMotoristaViagem,
+  fetchMotoristaViagemEventos,
+  fetchMotoristaViagemOcorrencias,
+  fetchMotoristaViagemLocalizacoes,
+} from "@/lib/motorista-query-offline";
 import * as sb from "@/data/supabase-repository";
 
 type Tables = {
@@ -43,15 +51,6 @@ const ACTIVE_KEY = "erp_transp_active_v6";
 
 export const DB_CHANGE_EVENT = "erp-transp-db-change";
 
-async function assertDataAccess(): Promise<void> {
-  if (!isSupabaseConfigured()) {
-    throw new Error("Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env.local");
-  }
-  if (!(await requireSupabaseSession())) {
-    throw new Error("Faça login para continuar.");
-  }
-}
-
 export function getActiveTransportadoraId(): UUID {
   if (typeof window === "undefined") return "";
   return localStorage.getItem(ACTIVE_KEY) ?? "";
@@ -63,17 +62,12 @@ export function setActiveTransportadoraId(id: UUID) {
   window.dispatchEvent(new CustomEvent(DB_CHANGE_EVENT));
 }
 
+export { invalidateMotoristaData } from "@/lib/motorista-invalidate";
+
 function invalidateRecursosQueries(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ["viagens"] });
   qc.invalidateQueries({ queryKey: ["motoristas"] });
   qc.invalidateQueries({ queryKey: ["veiculos"] });
-}
-
-export function invalidateMotoristaData(qc: ReturnType<typeof useQueryClient>) {
-  invalidateRecursosQueries(qc);
-  qc.invalidateQueries({ queryKey: ["viagem_eventos"] });
-  qc.invalidateQueries({ queryKey: ["viagem_ocorrencias"] });
-  qc.invalidateQueries({ queryKey: ["viagem_localizacoes"] });
 }
 
 export async function persistViagem(record: Viagem): Promise<Viagem> {
@@ -102,18 +96,19 @@ function useTenantList<K extends keyof Tables>(table: K) {
     queryKey: [table, tenant],
     enabled: !!tenant,
     queryFn: async () => {
-      await assertDataAccess();
       switch (table) {
         case "motoristas":
+          await assertDataAccess();
           return sb.sbListMotoristas(tenant) as Tables[K][];
         case "veiculos":
-          return sb.sbListVeiculos(tenant) as Tables[K][];
+          return fetchMotoristaVeiculos(tenant) as Tables[K][];
         case "clientes":
-          return sb.sbListClientes(tenant) as Tables[K][];
+          return fetchMotoristaClientes(tenant) as Tables[K][];
         case "produtos":
+          await assertDataAccess();
           return sb.sbListProdutos(tenant) as Tables[K][];
         case "viagens":
-          return sb.sbListViagens(tenant) as Tables[K][];
+          return fetchMotoristaViagens(tenant) as Tables[K][];
         default:
           return [] as Tables[K][];
       }
@@ -139,8 +134,10 @@ function useEntity<K extends keyof Tables>(table: K, id: UUID | undefined) {
           return sb.sbGetCliente(id);
         case "produtos":
           return sb.sbGetProduto(id);
-        case "viagens":
-          return sb.sbGetViagem(id);
+        case "viagens": {
+          const tenant = getActiveTransportadoraId();
+          return fetchMotoristaViagem(id, tenant);
+        }
         default:
           return null;
       }
@@ -303,14 +300,14 @@ function useViagemSubList<T extends { transportadora_id: UUID; viagem_id: UUID; 
     queryKey,
     enabled: !!viagemId && !!tenant,
     queryFn: async () => {
-      await assertDataAccess();
       let rows: ViagemEvento[] | ViagemOcorrencia[] | ViagemLocalizacao[];
+      if (!viagemId) return [] as T[];
       if (table === "viagem_eventos") {
-        rows = await sb.sbListViagemEventos(tenant, viagemId);
+        rows = await fetchMotoristaViagemEventos(tenant, viagemId);
       } else if (table === "viagem_ocorrencias") {
-        rows = await sb.sbListViagemOcorrencias(tenant, viagemId);
+        rows = await fetchMotoristaViagemOcorrencias(tenant, viagemId);
       } else {
-        rows = await sb.sbListViagemLocalizacoes(tenant, viagemId);
+        rows = await fetchMotoristaViagemLocalizacoes(tenant, viagemId);
       }
       if (sortFn) rows = [...rows].sort(sortFn as (a: typeof rows[0], b: typeof rows[0]) => number);
       return rows as T[];

@@ -2,6 +2,8 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { flushMotoristaOfflineQueue } from "@/lib/motorista-sync";
+import { hydrateMotoristaQueries } from "@/lib/motorista-cache-sync";
+import { getMotoristaSession } from "@/lib/motorista-session";
 import {
   getOfflineQueueCount,
   subscribeOfflineQueue,
@@ -24,6 +26,10 @@ export function useMotoristaOfflineSync() {
       setOnline(true);
       void (async () => {
         const n = await flushMotoristaOfflineQueue(qc);
+        const session = getMotoristaSession();
+        if (session) {
+          await hydrateMotoristaQueries(qc, session.transportadoraId, session.motoristaId);
+        }
         if (n > 0) {
           toast.success(`${n} registro${n > 1 ? "s" : ""} sincronizado${n > 1 ? "s" : ""}`);
         } else {

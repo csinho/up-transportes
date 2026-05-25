@@ -5,8 +5,13 @@ import {
   persistViagemEvento,
   persistViagemOcorrencia,
   persistViagemLocalizacao,
-  invalidateMotoristaData,
 } from "@/data/store";
+import { invalidateMotoristaData } from "@/lib/motorista-invalidate";
+import { getMotoristaSession } from "@/lib/motorista-session";
+import {
+  applyOpToMotoristaCache,
+  patchMotoristaQueriesFromCache,
+} from "@/lib/motorista-offline-store";
 import {
   enqueueOfflineOp,
   getOfflineQueue,
@@ -14,11 +19,10 @@ import {
   type MotoristaOfflineOperation,
 } from "@/lib/motorista-offline-queue";
 
-export type SyncResult = "synced" | "queued";
+import { isMotoristaOnline } from "@/lib/motorista-online";
 
-export function isMotoristaOnline(): boolean {
-  return typeof navigator !== "undefined" ? navigator.onLine : true;
-}
+export type SyncResult = "synced" | "queued";
+export { isMotoristaOnline };
 
 const SYNC_TIMEOUT_MS = 20_000;
 
@@ -53,11 +57,29 @@ async function applyOp(op: MotoristaOfflineOperation): Promise<void> {
   }
 }
 
+async function queueAndCache(
+  op: Omit<MotoristaOfflineOperation, "queuedAt">,
+  qc: QueryClient,
+): Promise<void> {
+  await enqueueOfflineOp(op);
+  const session = getMotoristaSession();
+  if (session) {
+    const cache = await applyOpToMotoristaCache(
+      session.transportadoraId,
+      session.motoristaId,
+      { ...op, queuedAt: new Date().toISOString() } as MotoristaOfflineOperation,
+    );
+    patchMotoristaQueriesFromCache(qc, cache);
+  } else {
+    invalidateMotoristaData(qc);
+  }
+}
+
 export async function flushMotoristaOfflineQueue(qc: QueryClient): Promise<number> {
-  const ops = getOfflineQueue();
+  const ops = await getOfflineQueue();
   if (ops.length === 0) return 0;
 
-  clearOfflineQueue();
+  await clearOfflineQueue();
   let synced = 0;
 
   for (const op of ops) {
@@ -65,7 +87,7 @@ export async function flushMotoristaOfflineQueue(qc: QueryClient): Promise<numbe
       await applyOp(op);
       synced++;
     } catch {
-      enqueueOfflineOp({
+      await enqueueOfflineOp({
         id: op.id,
         type: op.type,
         record: op.record,
@@ -89,16 +111,14 @@ export async function motoristaSyncViagemComEvento(
   ];
 
   if (!isMotoristaOnline()) {
-    for (const op of ops) enqueueOfflineOp(op);
-    invalidateMotoristaData(qc);
+    for (const op of ops) await queueAndCache(op, qc);
     return "queued";
   }
 
   try {
     await withTimeout(persistViagem(viagem));
   } catch {
-    for (const op of ops) enqueueOfflineOp(op);
-    invalidateMotoristaData(qc);
+    for (const op of ops) await queueAndCache(op, qc);
     return "queued";
   }
 
@@ -107,8 +127,7 @@ export async function motoristaSyncViagemComEvento(
     invalidateMotoristaData(qc);
     return "synced";
   } catch {
-    enqueueOfflineOp({ id: evento.id, type: "viagem_evento", record: evento });
-    invalidateMotoristaData(qc);
+    await queueAndCache({ id: evento.id, type: "viagem_evento", record: evento }, qc);
     throw new Error("Viagem salva, mas o evento não foi registrado. Tentaremos reenviar.");
   }
 }
@@ -118,8 +137,7 @@ async function persistOrQueue(
   qc: QueryClient,
 ): Promise<SyncResult> {
   if (!isMotoristaOnline()) {
-    enqueueOfflineOp(op);
-    invalidateMotoristaData(qc);
+    await queueAndCache(op, qc);
     return "queued";
   }
 
@@ -128,8 +146,7 @@ async function persistOrQueue(
     invalidateMotoristaData(qc);
     return "synced";
   } catch {
-    enqueueOfflineOp(op);
-    invalidateMotoristaData(qc);
+    await queueAndCache(op, qc);
     return "queued";
   }
 }
@@ -187,8 +204,7 @@ export async function motoristaRegistrarOcorrencia(
   ops.push({ id: input.evento.id, type: "viagem_evento", record: input.evento });
 
   if (!isMotoristaOnline()) {
-    for (const op of ops) enqueueOfflineOp(op);
-    invalidateMotoristaData(qc);
+    for (const op of ops) await queueAndCache(op, qc);
     return "queued";
   }
 
@@ -197,8 +213,7 @@ export async function motoristaRegistrarOcorrencia(
     invalidateMotoristaData(qc);
     return "synced";
   } catch {
-    for (const op of ops) enqueueOfflineOp(op);
-    invalidateMotoristaData(qc);
+    for (const op of ops) await queueAndCache(op, qc);
     return "queued";
   }
 }

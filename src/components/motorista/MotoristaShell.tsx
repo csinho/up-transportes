@@ -7,6 +7,7 @@ import { MotoristaInstalarPwa } from "@/components/motorista/MotoristaInstalarPw
 import { TransportadoraLogo } from "@/components/transportadora/TransportadoraLogo";
 import { useMotoristaSession } from "@/hooks/use-motorista-session";
 import { useMotoristaOfflineSync } from "@/hooks/use-motorista-offline-sync";
+import { useMotoristaCacheBootstrap } from "@/hooks/use-motorista-cache-bootstrap";
 import { registerMotoristaServiceWorker } from "@/lib/register-motorista-sw";
 import type { UUID } from "@/types";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ export function MotoristaShell({
 }: Props) {
   const { session, logout } = useMotoristaSession();
   const { online, pending } = useMotoristaOfflineSync();
+  useMotoristaCacheBootstrap();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const transportadoraId = session?.transportadoraId ?? transportadoraIdProp;
@@ -97,8 +99,8 @@ export function MotoristaShell({
         {!online && !auth && (
           <div className="bg-amber-500/10 px-4 py-1.5 text-center text-xs text-amber-800 dark:text-amber-200">
             {pending > 0
-              ? `${pending} alteração(ões) aguardando envio — serão sincronizadas ao reconectar`
-              : "Sem internet — alterações serão salvas no aparelho"}
+              ? `${pending} alteração(ões) no aparelho — serão enviadas ao reconectar`
+              : "Sem internet — dados salvos no aparelho (IndexedDB)"}
           </div>
         )}
       </header>
