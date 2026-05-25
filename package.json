@@ -14,7 +14,11 @@
     "supabase:login": "npx supabase login",
     "supabase:link": "npx supabase link --project-ref tmjbzmjnqkgjwwkrxuxh",
     "supabase:push": "bash scripts/supabase-push.sh",
-    "supabase:types": "npx supabase gen types typescript --linked > src/lib/supabase/database.types.ts"
+    "supabase:types": "npx supabase gen types typescript --linked > src/lib/supabase/database.types.ts",
+    "cf:login": "wrangler login",
+    "cf:whoami": "wrangler whoami",
+    "deploy": "bash scripts/cf-deploy.sh",
+    "deploy:dry-run": "bash scripts/cf-deploy.sh --dry-run"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",
