@@ -1,13 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { MapPin, Radio, Loader2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { ViagemStatusBadge } from "@/components/viagem/ViagemStatusBadge";
 import { TransportadoraLogo } from "@/components/transportadora/TransportadoraLogo";
 import { ViagemRastreamentoMap } from "@/components/rastreamento/ViagemRastreamentoMap";
 import { ViagemProgressoCard } from "@/components/viagem/ViagemProgressoCard";
 import { useAcompanhamentoCliente, useAcompanhamentoClienteRealtime } from "@/hooks/use-viagem-acesso-cliente";
 import { montarDadosMapaViagem } from "@/lib/rastreamento-mapa";
-import { STATUS_VIAGEM } from "@/types";
 
 export const Route = createFileRoute("/acompanhar/$token")({
   head: () => ({
@@ -51,7 +50,6 @@ function Page() {
   }
 
   const viagem = data.viagem;
-  const statusLabel = STATUS_VIAGEM.find((s) => s.value === viagem.status)?.label ?? viagem.status;
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background">
@@ -79,7 +77,7 @@ function Page() {
             #{String(viagem.numero_viagem).padStart(5, "0")}
           </h1>
           <div className="flex flex-wrap items-center gap-2 mt-2">
-            <Badge>{statusLabel}</Badge>
+            <ViagemStatusBadge status={viagem.status} />
             <span className="text-sm text-muted-foreground">
               {data.cliente_origem_nome ?? "Origem"} → {data.cliente_destino_nome ?? "Destino"}
             </span>

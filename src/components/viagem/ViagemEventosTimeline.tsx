@@ -1,7 +1,8 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { ViagemEvento } from "@/types";
-import { STATUS_VIAGEM, TIPOS_VIAGEM_EVENTO } from "@/types";
+import { TIPOS_VIAGEM_EVENTO } from "@/types";
+import { ViagemStatusBadge } from "@/components/viagem/ViagemStatusBadge";
 import { Badge } from "@/components/ui/badge";
 import { CircleDot, FileText, MapPin, AlertTriangle, Truck, Package, Clock, Flag } from "lucide-react";
 import { useListControls } from "@/hooks/use-list-controls";
@@ -93,17 +94,16 @@ export function ViagemEventosTimeline({ eventos }: { eventos: ViagemEvento[] }) 
                 <p className="text-sm text-muted-foreground mt-1">{ev.descricao}</p>
               )}
               {ev.status_novo && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Status:{" "}
+                <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                  <span className="text-xs text-muted-foreground">Status:</span>
                   {ev.status_anterior && (
                     <>
-                      {STATUS_VIAGEM.find((s) => s.value === ev.status_anterior)?.label} →{" "}
+                      <ViagemStatusBadge status={ev.status_anterior} size="sm" />
+                      <span className="text-xs text-muted-foreground">→</span>
                     </>
                   )}
-                  <span className="font-medium text-foreground">
-                    {STATUS_VIAGEM.find((s) => s.value === ev.status_novo)?.label}
-                  </span>
-                </p>
+                  <ViagemStatusBadge status={ev.status_novo} size="sm" />
+                </div>
               )}
               <p className="text-xs text-muted-foreground mt-2">
                 {format(new Date(ev.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}

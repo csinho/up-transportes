@@ -9,6 +9,7 @@ export type MarcadorViagemOverview = {
   temGps: boolean;
   motorista?: string;
   placa?: string;
+  status: Viagem["status"];
   statusLabel: string;
   velocidade?: number;
   registradoEm?: string;
@@ -38,6 +39,7 @@ export function listarMarcadoresRastreaveis(
         temGps: true,
         motorista: m?.nome,
         placa: ve?.placa,
+        status: v.status,
         statusLabel: STATUS_VIAGEM.find((s) => s.value === v.status)?.label ?? v.status,
         velocidade: ultima.velocidade_kmh,
         registradoEm: ultima.registrado_em,

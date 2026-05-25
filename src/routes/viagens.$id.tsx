@@ -16,7 +16,7 @@ import {
 import { generateUuid } from "@/lib/uuid";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { ViagemStatusBadge } from "@/components/viagem/ViagemStatusBadge";
 import { ArrowLeft, FileText, Flag, Save, MapPin } from "lucide-react";
 import { AddressForm } from "@/components/AddressForm";
 import { DocumentUploader } from "@/components/DocumentUploader";
@@ -155,7 +155,7 @@ function Page() {
           <Button variant="ghost" size="sm" asChild><Link to="/viagens"><ArrowLeft className="h-4 w-4 mr-1" /> Voltar</Link></Button>
           <h1 className="text-2xl font-bold mt-2">Viagem #{String(form.numero_viagem).padStart(5, "0")}</h1>
           <div className="flex gap-2 items-center mt-1">
-            <Badge variant="secondary">{STATUS_VIAGEM.find(s => s.value === form.status)?.label}</Badge>
+            <ViagemStatusBadge status={form.status} />
             <span className="text-sm text-muted-foreground">
               {cOrigem?.nome ?? "—"} → {cDestino?.nome ?? "—"}
             </span>

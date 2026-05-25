@@ -92,3 +92,30 @@ export async function runMotoristaOfflineSetup(qc: QueryClient): Promise<void> {
 
   return setupInFlight;
 }
+
+let refreshInFlight: Promise<boolean> | null = null;
+
+/** Atualiza Supabase → IndexedDB → React Query (sem toast). Usado em Realtime e ao voltar ao app. */
+export async function refreshMotoristaDataFromNetwork(qc: QueryClient): Promise<boolean> {
+  const session = getMotoristaSession();
+  if (!session || !isMotoristaOnline()) return false;
+
+  if (refreshInFlight) return refreshInFlight;
+
+  refreshInFlight = (async () => {
+    const result = await refreshMotoristaSnapshotFromNetwork(
+      session.transportadoraId,
+      session.motoristaId,
+    );
+    if (result.ok) {
+      patchMotoristaQueriesFromCache(qc, result.cache);
+      return true;
+    }
+    console.warn("[motorista-live] Falha ao atualizar:", result.error);
+    return false;
+  })().finally(() => {
+    refreshInFlight = null;
+  });
+
+  return refreshInFlight;
+}

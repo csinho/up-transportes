@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { ViagemStatusBadge } from "@/components/viagem/ViagemStatusBadge";
+import { getViagemStatusStyle } from "@/lib/viagem-status-styles";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   useMotoristas,
@@ -146,7 +148,10 @@ function Dashboard() {
                 key={v.id}
                 to="/viagens/$id"
                 params={{ id: v.id }}
-                className="flex items-center justify-between rounded-md border p-3 hover:bg-muted/50 transition-colors"
+                className={cn(
+                  "flex items-center justify-between rounded-md border border-l-4 p-3 hover:bg-muted/50 transition-colors",
+                  getViagemStatusStyle(v.status).accent,
+                )}
               >
                 <div>
                   <p className="font-mono text-sm font-medium">#{String(v.numero_viagem).padStart(5, "0")}</p>
@@ -154,9 +159,7 @@ function Dashboard() {
                     {v.endereco_origem?.cidade ?? "—"} → {v.endereco_destino?.cidade ?? "—"}
                   </p>
                 </div>
-                <Badge variant="secondary">
-                  {STATUS_VIAGEM.find((s) => s.value === v.status)?.label}
-                </Badge>
+                <ViagemStatusBadge status={v.status} />
               </Link>
             ))}
             </div>

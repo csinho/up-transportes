@@ -22,9 +22,8 @@ import { useViagemGeolocalizacao } from "@/hooks/use-viagem-geolocalizacao";
 import { calcularProgressoViagem } from "@/lib/viagem-progresso";
 import { isViagemAtiva } from "@/lib/viagem-recursos";
 import { fmtMoeda } from "@/lib/motorista-app-path";
-import { Badge } from "@/components/ui/badge";
+import { ViagemStatusBadge } from "@/components/viagem/ViagemStatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { STATUS_VIAGEM } from "@/types";
 import type { Viagem } from "@/types";
 import { MapPin, Navigation } from "lucide-react";
 
@@ -107,7 +106,6 @@ function Page() {
   const clienteOrigem = clientes.find((c) => c.id === form.cliente_origem_id);
   const clienteDestino = clientes.find((c) => c.id === form.cliente_destino_id);
   const progresso = calcularProgressoViagem(form, localizacoes);
-  const statusLabel = STATUS_VIAGEM.find((s) => s.value === form.status)?.label ?? form.status;
   const rastreando = isViagemAtiva(form.status);
 
   return (
@@ -117,7 +115,7 @@ function Page() {
     >
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <Badge variant="secondary">{statusLabel}</Badge>
+          <ViagemStatusBadge status={form.status} />
           {rastreando && (
             <span className="text-xs text-muted-foreground flex items-center gap-1">
               <Navigation className="h-3.5 w-3.5" />

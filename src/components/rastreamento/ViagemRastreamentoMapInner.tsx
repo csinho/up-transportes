@@ -5,10 +5,9 @@ import "leaflet/dist/leaflet.css";
 import { Link } from "@tanstack/react-router";
 import type { DadosMapaViagem } from "@/lib/rastreamento-mapa";
 import type { LatLng } from "@/lib/geo-cidades";
-import { STATUS_VIAGEM } from "@/types";
+import { ViagemStatusBadge } from "@/components/viagem/ViagemStatusBadge";
 import { formatarDataHora, formatarDuracao } from "@/lib/viagem-progresso";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
 function divIcon(label: string, bg: string, size = 32) {
   return L.divIcon({
@@ -38,11 +37,10 @@ function FitBounds({ points, tripId, revision }: { points: LatLng[]; tripId: str
 
 function PopupConteudo({ dados }: { dados: DadosMapaViagem }) {
   const v = dados.viagem;
-  const status = STATUS_VIAGEM.find((s) => s.value === v.status)?.label;
   return (
     <div className="min-w-[200px] space-y-2 text-sm">
       <p className="font-mono font-bold">#{String(v.numero_viagem).padStart(5, "0")}</p>
-      <Badge variant="secondary" className="text-xs">{status}</Badge>
+      <ViagemStatusBadge status={v.status} size="sm" />
       <p className="text-muted-foreground text-xs">
         {dados.clienteOrigem?.nome ?? v.endereco_origem.cidade} →{" "}
         {dados.clienteDestino?.nome ?? v.endereco_destino.cidade}

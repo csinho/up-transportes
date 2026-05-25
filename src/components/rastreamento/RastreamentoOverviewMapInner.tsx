@@ -4,7 +4,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { MarcadorViagemOverview } from "@/lib/rastreamento-overview";
 import type { LatLng } from "@/lib/geo-cidades";
-import { Badge } from "@/components/ui/badge";
+import { ViagemStatusBadge } from "@/components/viagem/ViagemStatusBadge";
 import { Button } from "@/components/ui/button";
 import { formatarDataHora } from "@/lib/viagem-progresso";
 
@@ -88,7 +88,7 @@ export function RastreamentoOverviewMapInner({
             <Popup>
               <div className="min-w-[180px] space-y-2 text-sm">
                 <p className="font-mono font-bold">#{String(m.numeroViagem).padStart(5, "0")}</p>
-                <Badge variant="secondary" className="text-xs">{m.statusLabel}</Badge>
+                <ViagemStatusBadge status={m.status} size="sm" />
                 <p className="text-xs text-muted-foreground">
                   {m.motorista ?? "—"} · {m.placa ?? "—"}
                 </p>

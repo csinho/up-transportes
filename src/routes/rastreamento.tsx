@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { ViagemStatusBadge } from "@/components/viagem/ViagemStatusBadge";
 import { Button } from "@/components/ui/button";
 import {
   useViagens,
@@ -231,9 +231,7 @@ function Page() {
                   ) : null}
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant="secondary">
-                    {STATUS_VIAGEM.find((s) => s.value === v.status)?.label}
-                  </Badge>
+                  <ViagemStatusBadge status={v.status} />
                   <Button
                     size="sm"
                     variant="ghost"

@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Clock, MapPin, Timer, ChevronRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { ViagemStatusBadge } from "@/components/viagem/ViagemStatusBadge";
+import { ViagemStatusCard } from "@/components/viagem/ViagemStatusCard";
 import type { Viagem } from "@/types";
-import { STATUS_VIAGEM } from "@/types";
 import { useMotoristaViagemLocalizacoes } from "@/hooks/use-motorista-data";
 import { calcularProgressoViagem, formatarDuracao, type ProgressoViagem } from "@/lib/viagem-progresso";
 import { fmtMoeda } from "@/lib/motorista-app-path";
@@ -27,15 +27,14 @@ export function MotoristaViagemDestaque({ viagem }: Props) {
     return () => window.clearInterval(timer);
   }, [viagem, localizacoes]);
 
-  const statusLabel = STATUS_VIAGEM.find((s) => s.value === viagem.status)?.label ?? viagem.status;
   const pct = progresso?.percentualConcluido ?? 0;
 
   return (
-    <Card className="border-primary/30 bg-primary/5">
+    <ViagemStatusCard status={viagem.status} accent>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base">Viagem em andamento</CardTitle>
-          <Badge>{statusLabel}</Badge>
+          <ViagemStatusBadge status={viagem.status} />
         </div>
         <p className="text-sm font-medium">
           #{String(viagem.numero_viagem).padStart(5, "0")}
@@ -93,6 +92,6 @@ export function MotoristaViagemDestaque({ viagem }: Props) {
           </Link>
         </Button>
       </CardContent>
-    </Card>
+    </ViagemStatusCard>
   );
 }
