@@ -12,7 +12,7 @@ type Props = {
 
 export function PlatformAuthGate({ children }: Props) {
   const { loading, session } = useAuthSession();
-  const { data: isAdmin, isLoading: adminLoading } = useIsPlatformAdmin();
+  const { data: isAdmin, isPending: adminPending } = useIsPlatformAdmin();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,7 +24,7 @@ export function PlatformAuthGate({ children }: Props) {
     });
   }, [loading, session, navigate]);
 
-  if (loading || adminLoading) {
+  if (loading || (adminPending && isAdmin === undefined)) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

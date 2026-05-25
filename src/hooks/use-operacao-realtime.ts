@@ -49,7 +49,6 @@ function attachOperacaoChannel(
 
   channel.subscribe((status, err) => {
     if (status === "SUBSCRIBED") {
-      invalidateOperacaoQueries(qc);
       return;
     }
     if (status === "CHANNEL_ERROR") {
@@ -67,7 +66,7 @@ function attachOperacaoChannel(
 
 /**
  * Supabase Realtime — invalida React Query quando operação muda no banco.
- * Reconecta ao perder conexão, ao voltar online ou ao focar a aba.
+ * Reconecta ao perder conexão; não refaz fetch ao apenas trocar de aba do navegador.
  */
 export function useOperacaoRealtime() {
   const qc = useQueryClient();
@@ -125,25 +124,16 @@ export function useOperacaoRealtime() {
       subscribe();
     });
 
-    const onVisible = () => {
-      if (document.visibilityState === "visible") invalidateOperacaoQueries(qc);
-    };
     const onOnline = () => {
       subscribe();
-      invalidateOperacaoQueries(qc);
     };
-    const onFocus = () => invalidateOperacaoQueries(qc);
 
-    document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("online", onOnline);
-    window.addEventListener("focus", onFocus);
 
     return () => {
       cancelled = true;
       authSub.unsubscribe();
-      document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("online", onOnline);
-      window.removeEventListener("focus", onFocus);
       teardown();
     };
   }, [qc, tenant, session?.user.id, loading]);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Loader2, ExternalLink, Shield } from "lucide-react";
@@ -17,18 +17,27 @@ type Props = {
 /** Redireciona para /login quando não há sessão Supabase. Bloqueia perfis sem acesso ao ERP. */
 export function ErpAuthGate({ children }: Props) {
   const { loading, session } = useAuthSession();
-  const { canAccessErp, loading: roleLoading } = useErpPermissions();
+  const { canAccessErp, loading: permissionsLoading } = useErpPermissions();
   const { data: isPlatformAdmin } = useIsPlatformAdmin();
-  const { data: transportadoras = [], isLoading: tenantsLoading } = useTransportadoras();
+  const { data: transportadoras = [] } = useTransportadoras();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [bootstrapping, setBootstrapping] = useState(true);
+  const bootstrappedUserIdRef = useRef<string | null>(null);
+
+  const userId = session?.user?.id;
 
   useEffect(() => {
     if (loading) return;
 
-    if (!session) {
+    if (!userId) {
+      bootstrappedUserIdRef.current = null;
+      setBootstrapping(false);
+      return;
+    }
+
+    if (bootstrappedUserIdRef.current === userId) {
       setBootstrapping(false);
       return;
     }
@@ -40,25 +49,27 @@ export function ErpAuthGate({ children }: Props) {
       await ensureDemoTenantLink();
       await queryClient.invalidateQueries({ queryKey: ["transportadoras"] });
       await queryClient.invalidateQueries({ queryKey: ["user-tenant-role"] });
-      if (!cancelled) setBootstrapping(false);
+      if (!cancelled) {
+        bootstrappedUserIdRef.current = userId;
+        setBootstrapping(false);
+      }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [loading, session, queryClient]);
+  }, [loading, userId, queryClient]);
 
   useEffect(() => {
     if (loading || !session || bootstrapping) return;
-    if (!roleLoading && !tenantsLoading && isPlatformAdmin && transportadoras.length === 0 && !canAccessErp) {
+    if (!permissionsLoading && isPlatformAdmin && transportadoras.length === 0 && !canAccessErp) {
       void navigate({ to: "/plataforma/transportadoras", replace: true });
     }
   }, [
     loading,
     session,
     bootstrapping,
-    roleLoading,
-    tenantsLoading,
+    permissionsLoading,
     isPlatformAdmin,
     transportadoras.length,
     canAccessErp,
@@ -74,7 +85,7 @@ export function ErpAuthGate({ children }: Props) {
     });
   }, [loading, session, pathname, navigate]);
 
-  if (loading || bootstrapping || roleLoading || tenantsLoading) {
+  if (loading || bootstrapping || permissionsLoading) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
