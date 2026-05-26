@@ -9,6 +9,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { usePwaInstall } from "@/hooks/use-pwa-install";
+import { isSecureContextForPwa } from "@/lib/pwa-utils";
 import { cn } from "@/lib/utils";
 
 type Props = {

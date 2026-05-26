@@ -10,16 +10,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Copy, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useActiveTenantId, useTransportadora } from "@/data/store";
+import { useActiveTenantId, useTransportadora, useTransportadoras } from "@/data/store";
 import { logoToDataUrl } from "@/lib/logo-url";
-import { motoristaAppUrl } from "@/lib/motorista-tenant";
-
-function getMotoristaAppUrl(transportadoraId?: string): string {
-  if (typeof window === "undefined") {
-    return transportadoraId ? `/motorista?t=${transportadoraId}` : "/motorista";
-  }
-  return motoristaAppUrl(transportadoraId);
-}
+import {
+  buildMotoristaAppAbsoluteUrl,
+  resolveErpMotoristaTenantId,
+} from "@/lib/motorista-tenant";
+import { copyTextToClipboard } from "@/lib/copy-to-clipboard";
 
 type Props = {
   open: boolean;
@@ -28,12 +25,14 @@ type Props = {
 
 export function MotoristaAppQrDialog({ open, onOpenChange }: Props) {
   const tenantId = useActiveTenantId();
-  const { data: transportadora } = useTransportadora(tenantId);
+  const { data: transportadoras = [] } = useTransportadoras();
+  const resolvedTenantId = resolveErpMotoristaTenantId(tenantId, transportadoras[0]?.id);
+  const { data: transportadora } = useTransportadora(resolvedTenantId);
   const containerRef = useRef<HTMLDivElement>(null);
   const qrRef = useRef<QRCodeStyling | null>(null);
   const [gerando, setGerando] = useState(false);
 
-  const url = getMotoristaAppUrl(tenantId || undefined);
+  const url = buildMotoristaAppAbsoluteUrl(resolvedTenantId);
 
   useEffect(() => {
     if (!open) return;
@@ -87,12 +86,16 @@ export function MotoristaAppQrDialog({ open, onOpenChange }: Props) {
   }, [open, url, transportadora?.logo_url]);
 
   const copiarLink = () => {
+    if (!resolvedTenantId) {
+      toast.error("Transportadora ainda não carregada.");
+      return;
+    }
     void (async () => {
-      try {
-        await navigator.clipboard.writeText(url);
-        toast.success("Link copiado!");
-      } catch {
-        toast.error(`Copie manualmente: ${url}`);
+      const ok = await copyTextToClipboard(url);
+      if (ok) {
+        toast.success("Link copiado!", { description: url });
+      } else {
+        toast.error("Não foi possível copiar automaticamente.", { description: url });
       }
     })();
   };

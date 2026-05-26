@@ -19,10 +19,29 @@ export function persistMotoristaBrandingTenant(id: UUID) {
   setActiveTransportadoraId(id);
 }
 
-export function motoristaAppUrl(transportadoraId?: UUID): string {
-  if (typeof window === "undefined") {
-    return transportadoraId ? `/motorista?t=${transportadoraId}` : "/motorista";
+/** Resolve tenant ativo no ERP (ignora valores inválidos no localStorage). */
+export function resolveErpMotoristaTenantId(...candidates: (string | undefined)[]): UUID | undefined {
+  for (const candidate of candidates) {
+    if (isValidTransportadoraId(candidate)) return candidate;
   }
-  const base = `${window.location.origin}/motorista`;
-  return transportadoraId ? `${base}?t=${transportadoraId}` : base;
+  const stored = getActiveTransportadoraId();
+  return isValidTransportadoraId(stored) ? stored : undefined;
+}
+
+/** URL absoluta do PWA motorista (sempre com origin + path + ?t=uuid). */
+export function buildMotoristaAppAbsoluteUrl(transportadoraId?: UUID): string {
+  const path = transportadoraId
+    ? `/motorista?t=${encodeURIComponent(transportadoraId)}`
+    : "/motorista";
+
+  if (typeof window === "undefined") return path;
+
+  const origin = window.location.origin;
+  if (!origin || origin === "null") return path;
+
+  return `${origin}${path}`;
+}
+
+export function motoristaAppUrl(transportadoraId?: UUID): string {
+  return buildMotoristaAppAbsoluteUrl(transportadoraId);
 }

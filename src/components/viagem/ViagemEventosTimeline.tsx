@@ -101,11 +101,14 @@ export function ViagemEventosTimeline({ eventos, viagens, showViagemLink }: Prop
         const isLast = i === list.paginated.length - 1;
 
         return (
-          <div key={ev.id} className="flex gap-4 pb-8 last:pb-0 relative">
+          <div key={ev.id} className="flex gap-4 items-center pb-8 last:pb-0 relative">
             {!isLast && (
-              <div className="absolute left-[17px] top-10 bottom-0 w-px bg-border" aria-hidden />
+              <div
+                className="absolute left-[17px] top-[calc(50%+1.125rem)] bottom-0 w-px bg-border"
+                aria-hidden
+              />
             )}
-            <div className="flex flex-col items-center shrink-0 z-10">
+            <div className="flex flex-col items-center shrink-0 z-10 self-center">
               <div
                 className={cn(
                   "h-9 w-9 rounded-full flex items-center justify-center ring-4 bg-card border",
@@ -117,40 +120,46 @@ export function ViagemEventosTimeline({ eventos, viagens, showViagemLink }: Prop
                 <span className={cn("h-2.5 w-2.5 rounded-full", dotStyle.dot)} />
               </div>
             </div>
-            <div className="flex-1 pt-0.5 min-w-0 rounded-xl border px-4 py-6 bg-card hover:shadow-sm transition-shadow">
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
-                <p className="font-medium text-sm">{ev.titulo}</p>
-                <Badge variant="outline" className="text-[10px]">{tipoLabel}</Badge>
-                <Badge variant="secondary" className="text-[10px]">{ORIGEM_LABEL[ev.origem] ?? ev.origem}</Badge>
-                {showViagemLink && viagem && (
-                  <Link
-                    to="/viagens/$id"
-                    params={{ id: viagem.id }}
-                    className="font-mono text-xs text-brand-blue font-bold hover:underline"
-                  >
-                    #{String(viagem.numero_viagem).padStart(5, "0")}
-                  </Link>
-                )}
-              </div>
-              {ev.descricao && (
-                <p className="text-sm text-muted-foreground">{ev.descricao}</p>
-              )}
-              {ev.status_novo && (
-                <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                  <span className="text-xs text-muted-foreground">Status:</span>
-                  {ev.status_anterior && (
-                    <>
-                      <ViagemStatusBadge status={ev.status_anterior} size="sm" />
-                      <span className="text-xs text-muted-foreground">→</span>
-                    </>
+            <div className="flex-1 min-w-0 rounded-xl border bg-card px-4 py-4 hover:shadow-sm transition-shadow">
+              <div className="flex flex-col justify-center gap-2.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <p className="font-medium text-sm leading-snug">{ev.titulo}</p>
+                  <Badge variant="outline" className="text-[10px]">
+                    {tipoLabel}
+                  </Badge>
+                  <Badge variant="secondary" className="text-[10px]">
+                    {ORIGEM_LABEL[ev.origem] ?? ev.origem}
+                  </Badge>
+                  {showViagemLink && viagem && (
+                    <Link
+                      to="/viagens/$id"
+                      params={{ id: viagem.id }}
+                      className="font-mono text-xs text-brand-blue font-bold hover:underline"
+                    >
+                      #{String(viagem.numero_viagem).padStart(5, "0")}
+                    </Link>
                   )}
-                  <ViagemStatusBadge status={ev.status_novo} size="sm" />
                 </div>
-              )}
-              <p className="text-xs text-muted-foreground mt-2">
-                {format(new Date(ev.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-              </p>
+                {ev.descricao && (
+                  <p className="text-sm text-muted-foreground leading-relaxed">{ev.descricao}</p>
+                )}
+                {ev.status_novo && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground">Status:</span>
+                    {ev.status_anterior && (
+                      <>
+                        <ViagemStatusBadge status={ev.status_anterior} size="sm" />
+                        <span className="text-xs text-muted-foreground">→</span>
+                      </>
+                    )}
+                    <ViagemStatusBadge status={ev.status_novo} size="sm" />
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {format(new Date(ev.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                </p>
+              </div>
             </div>
           </div>
         );
