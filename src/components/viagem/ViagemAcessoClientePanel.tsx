@@ -49,15 +49,15 @@ export function ViagemAcessoClientePanel({ viagemId, numeroViagem }: Props) {
   };
 
   return (
-    <Card>
+    <Card className="border-2 border-brand-blue/30 bg-blue-50/50 shadow-card">
       <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
-          <Link2 className="h-4 w-4" />
-          Acompanhamento para o cliente
+        <CardTitle className="text-base flex items-center gap-2 font-display">
+          <Link2 className="h-4 w-4 text-brand-blue" />
+          Compartilhamento com cliente
         </CardTitle>
         <CardDescription>
-          Gere um link exclusivo para o cliente visualizar <strong>apenas esta viagem</strong> em
-          tempo real — mapa, progresso e status. Sem acesso ao ERP, motorista ou outros dados.
+          Gere um link seguro para o cliente acompanhar somente esta viagem em tempo real, com mapa,
+          status e progresso da entrega.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -71,13 +71,13 @@ export function ViagemAcessoClientePanel({ viagemId, numeroViagem }: Props) {
               onChange={(e) => setTitulo(e.target.value)}
             />
           </div>
-          <Button onClick={gerar} disabled={criar.isPending} className="gap-2">
+          <Button onClick={gerar} disabled={criar.isPending} variant="brand" className="gap-2">
             {criar.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Link2 className="h-4 w-4" />
             )}
-            {ativo ? "Atualizar link" : "Gerar link"}
+            {ativo ? "Atualizar link" : "Gerar link de rastreio"}
           </Button>
         </div>
 

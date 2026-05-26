@@ -70,6 +70,7 @@ export function ViagemProgressoCard({ progresso, compact, className }: Props) {
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <Metrica
             icon={Timer}
+            accent="orange"
             label={aguardandoInicio && !emAndamento ? "Viagem prevista" : "Tempo restante"}
             valor={
               emAndamento
@@ -85,17 +86,20 @@ export function ViagemProgressoCard({ progresso, compact, className }: Props) {
           />
           <Metrica
             icon={Clock}
+            accent="blue"
             label="Duração total prevista"
             valor={formatarDuracao(tempoTotalMinutos)}
           />
           <Metrica
             icon={MapPin}
+            accent="green"
             label="Distância restante"
             valor={`${distanciaRestanteKm.toLocaleString("pt-BR")} km`}
             sub={`${distanciaPercorridaKm.toLocaleString("pt-BR")} / ${distanciaTotalKm.toLocaleString("pt-BR")} km`}
           />
           <Metrica
             icon={Gauge}
+            accent="navy"
             label="Vel. média"
             valor={velocidadeMediaKmh != null ? `${velocidadeMediaKmh} km/h` : "—"}
             sub={emAndamento ? `Decorrido: ${formatarDuracao(tempoDecorridoMinutos)}` : undefined}
@@ -136,26 +140,36 @@ export function ViagemProgressoCard({ progresso, compact, className }: Props) {
   );
 }
 
+const metricaAccent: Record<string, { border: string; icon: string }> = {
+  orange: { border: "border-t-brand-orange", icon: "text-brand-orange" },
+  blue: { border: "border-t-brand-blue", icon: "text-brand-blue" },
+  green: { border: "border-t-brand-success", icon: "text-brand-success" },
+  navy: { border: "border-t-brand-navy", icon: "text-brand-navy" },
+};
+
 function Metrica({
   icon: Icon,
   label,
   valor,
   sub,
   destaque,
+  accent = "blue",
 }: {
   icon: typeof Timer;
   label: string;
   valor: string;
   sub?: string;
   destaque?: boolean;
+  accent?: keyof typeof metricaAccent;
 }) {
+  const styles = metricaAccent[accent];
   return (
-    <div className="rounded-md border p-3 space-y-1">
+    <div className={cn("rounded-xl border border-t-4 p-4 space-y-1 bg-card", styles.border)}>
       <p className="text-xs text-muted-foreground flex items-center gap-1">
-        <Icon className="h-3.5 w-3.5" />
+        <Icon className={cn("h-3.5 w-3.5", styles.icon)} />
         {label}
       </p>
-      <p className={cn("font-semibold tabular-nums", destaque && "text-primary")}>{valor}</p>
+      <p className={cn("text-3xl font-bold font-display tabular-nums", destaque && "text-brand-blue")}>{valor}</p>
       {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
     </div>
   );

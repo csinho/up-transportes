@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Copy, QrCode, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,12 +22,7 @@ function getMotoristaAppUrl(transportadoraId?: string): string {
 /** Copia o link e exibe QR Code do PWA (/motorista) para motoristas. */
 export function MotoristaAppLinkCopy() {
   const tenantId = useActiveTenantId();
-  const [url, setUrl] = useState("/motorista");
   const [qrOpen, setQrOpen] = useState(false);
-
-  useEffect(() => {
-    setUrl(getMotoristaAppUrl(tenantId || undefined));
-  }, [tenantId]);
 
   const copiar = () => {
     const link = getMotoristaAppUrl(tenantId || undefined);
@@ -54,9 +49,8 @@ export function MotoristaAppLinkCopy() {
                 <Copy className="h-3.5 w-3.5 shrink-0 opacity-70" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom" className="max-w-xs break-all">
-              <p className="text-xs font-medium mb-1">Copiar link para motoristas</p>
-              <p className="text-xs text-muted-foreground">{url}</p>
+            <TooltipContent side="bottom" className="text-white">
+              Copiar link para motoristas
             </TooltipContent>
           </Tooltip>
 

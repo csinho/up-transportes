@@ -79,19 +79,20 @@ export function MotoristaShell({
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background">
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <div className="h-1 bg-brand-blue shrink-0" aria-hidden />
+      <header className="sticky top-0 z-40 border-b bg-gradient-to-r from-brand-navy to-[#152238] text-white shadow-card">
         <div className="flex h-14 items-center justify-between gap-3 px-4 max-w-lg mx-auto w-full">
           <div className="flex items-center gap-2 min-w-0">
             <TransportadoraLogo transportadoraId={transportadoraId} size="sm" />
             <div className="min-w-0">
-              <p className="text-sm font-semibold truncate">{titulo}</p>
+              <p className="text-sm font-semibold font-display truncate">{titulo}</p>
               {session && !auth && (
-                <p className="text-xs text-muted-foreground truncate">{session.nome}</p>
+                <p className="text-xs text-white/70 truncate">{session.nome}</p>
               )}
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            <MotoristaInstalarPwa />
+            <MotoristaInstalarPwa onDarkHeader />
             {!online && pending > 0 && (
               <Badge variant="secondary" className="text-xs gap-1 px-2">
                 <CloudOff className="h-3 w-3" />
@@ -99,12 +100,12 @@ export function MotoristaShell({
               </Badge>
             )}
             {online ? (
-              <Wifi className="h-4 w-4 text-emerald-600" aria-label="Online" />
+              <Wifi className="h-4 w-4 text-emerald-400" aria-label="Online" />
             ) : (
-              <WifiOff className="h-4 w-4 text-orange-600" aria-label="Offline" />
+              <WifiOff className="h-4 w-4 text-brand-orange" aria-label="Offline" />
             )}
             {session && !auth && (
-              <Button variant="ghost" size="icon" onClick={sair} aria-label="Sair">
+              <Button variant="ghost" size="icon" onClick={sair} aria-label="Sair" className="text-white hover:bg-white/10">
                 <LogOut className="h-4 w-4" />
               </Button>
             )}
@@ -142,11 +143,14 @@ export function MotoristaShell({
                   to={item.to}
                   preload="intent"
                   className={cn(
-                    "flex-1 flex flex-col items-center gap-1 py-2.5 text-xs transition-colors",
-                    active ? "text-primary font-medium" : "text-muted-foreground",
+                    "flex-1 flex flex-col items-center gap-1 py-2.5 text-xs transition-colors relative",
+                    active ? "text-brand-orange font-semibold" : "text-muted-foreground",
                   )}
                 >
-                  <item.icon className={cn("h-5 w-5", active && "stroke-[2.5]")} />
+                  {active && (
+                    <span className="absolute top-0 inset-x-4 h-0.5 bg-brand-orange rounded-full" aria-hidden />
+                  )}
+                  <item.icon className={cn("h-5 w-5", active && "stroke-[2.5] text-brand-orange")} />
                   {item.label}
                 </Link>
               );

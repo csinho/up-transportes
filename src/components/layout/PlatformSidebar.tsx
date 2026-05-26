@@ -51,7 +51,7 @@ export function PlatformSidebar() {
         >
           <div
             className={cn(
-              "h-8 w-8 shrink-0 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold text-sm",
+              "h-8 w-8 shrink-0 rounded-md bg-brand-navy text-white flex items-center justify-center font-bold text-sm",
               "group-data-[collapsible=icon]:h-6 group-data-[collapsible=icon]:w-6 group-data-[collapsible=icon]:text-xs",
             )}
           >

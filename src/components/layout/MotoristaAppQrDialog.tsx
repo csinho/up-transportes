@@ -110,8 +110,7 @@ export function MotoristaAppQrDialog({ open, onOpenChange }: Props) {
         <DialogHeader>
           <DialogTitle>QR Code — App motorista</DialogTitle>
           <DialogDescription>
-            Motoristas escaneiam para abrir o PWA. Logo de{" "}
-            {transportadora?.nome_fantasia ?? "sua transportadora"} no centro.
+            Motoristas escaneiam para abrir o APP de rastreamento
           </DialogDescription>
         </DialogHeader>
 
@@ -125,7 +124,6 @@ export function MotoristaAppQrDialog({ open, onOpenChange }: Props) {
               className="w-[280px] h-[280px] [&>canvas]:!w-full [&>canvas]:!h-full [&>canvas]:block"
             />
           </div>
-          <p className="text-xs text-muted-foreground text-center break-all px-2">{url}</p>
           <div className="flex flex-wrap gap-2 w-full justify-center">
             <Button variant="outline" size="sm" onClick={copiarLink}>
               <Copy className="h-4 w-4 mr-1" />

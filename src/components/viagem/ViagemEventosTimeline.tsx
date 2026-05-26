@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import type { ViagemEvento } from "@/types";
+import { Link } from "@tanstack/react-router";
+import type { Viagem, ViagemEvento } from "@/types";
 import { TIPOS_VIAGEM_EVENTO } from "@/types";
 import { ViagemStatusBadge } from "@/components/viagem/ViagemStatusBadge";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,7 @@ import { ListToolbar } from "@/components/list/ListToolbar";
 import { ListFilterSelect } from "@/components/list/ListFilterSelect";
 import { ListPagination } from "@/components/list/ListPagination";
 import { FILTER_ALL, matchesAny } from "@/lib/list-utils";
+import { cn } from "@/lib/utils";
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   viagem_criada: CircleDot,
@@ -29,13 +31,30 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   viagem_finalizada: Flag,
 };
 
+const DOT_STYLES: Record<string, { dot: string; ring: string }> = {
+  ocorrencia_registrada: { dot: "bg-brand-danger", ring: "ring-red-200" },
+  viagem_finalizada: { dot: "bg-brand-success", ring: "ring-green-200" },
+  status_alterado: { dot: "bg-brand-blue", ring: "ring-blue-200" },
+  localizacao_enviada: { dot: "bg-brand-orange", ring: "ring-orange-200" },
+};
+
+const DEFAULT_DOT = { dot: "bg-muted-foreground/60", ring: "ring-border" };
+
 const ORIGEM_LABEL: Record<string, string> = {
   sistema: "Sistema",
   motorista: "Motorista",
   operador: "Operador",
 };
 
-export function ViagemEventosTimeline({ eventos }: { eventos: ViagemEvento[] }) {
+type Props = {
+  eventos: ViagemEvento[];
+  viagens?: Viagem[];
+  showViagemLink?: boolean;
+};
+
+export function ViagemEventosTimeline({ eventos, viagens, showViagemLink }: Props) {
+  const viagemPorId = new Map((viagens ?? []).map((v) => [v.id, v]));
+
   const list = useListControls({
     items: eventos,
     searchFn: (ev, q) =>
@@ -50,7 +69,7 @@ export function ViagemEventosTimeline({ eventos }: { eventos: ViagemEvento[] }) 
   if (eventos.length === 0) {
     return (
       <p className="text-sm text-muted-foreground py-8 text-center">
-        Nenhum evento registrado para esta viagem.
+        Nenhum evento registrado.
       </p>
     );
   }
@@ -72,29 +91,53 @@ export function ViagemEventosTimeline({ eventos }: { eventos: ViagemEvento[] }) 
           options={TIPOS_VIAGEM_EVENTO.map((t) => ({ value: t.value, label: t.label }))}
         />
       </ListToolbar>
-      <div className="space-y-0">
+      <div className="relative pl-2">
       {list.paginated.map((ev, i) => {
         const Icon = ICONS[ev.tipo] ?? CircleDot;
         const tipoLabel = TIPOS_VIAGEM_EVENTO.find((t) => t.value === ev.tipo)?.label ?? ev.tipo;
+        const dotStyle = DOT_STYLES[ev.tipo] ?? DEFAULT_DOT;
+        const viagem = viagemPorId.get(ev.viagem_id);
+        const isHighlight = ev.tipo === "ocorrencia_registrada" || ev.tipo === "viagem_finalizada";
+        const isLast = i === list.paginated.length - 1;
+
         return (
-          <div key={ev.id} className="flex gap-4 pb-6 last:pb-0">
-            <div className="flex flex-col items-center">
-              <div className="h-9 w-9 rounded-full border bg-muted flex items-center justify-center shrink-0">
-                <Icon className="h-4 w-4 text-muted-foreground" />
+          <div key={ev.id} className="flex gap-4 pb-8 last:pb-0 relative">
+            {!isLast && (
+              <div className="absolute left-[17px] top-10 bottom-0 w-px bg-border" aria-hidden />
+            )}
+            <div className="flex flex-col items-center shrink-0 z-10">
+              <div
+                className={cn(
+                  "h-9 w-9 rounded-full flex items-center justify-center ring-4 bg-card border",
+                  dotStyle.ring,
+                  isHighlight && ev.tipo === "ocorrencia_registrada" && "border-destructive/40 bg-destructive/5",
+                  isHighlight && ev.tipo === "viagem_finalizada" && "border-green-500/40 bg-green-50",
+                )}
+              >
+                <span className={cn("h-2.5 w-2.5 rounded-full", dotStyle.dot)} />
               </div>
-              {i < list.paginated.length - 1 && <div className="w-px flex-1 bg-border mt-2 min-h-[24px]" />}
             </div>
-            <div className="flex-1 pt-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="flex-1 pt-0.5 min-w-0 rounded-xl border px-4 py-6 bg-card hover:shadow-sm transition-shadow">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
                 <p className="font-medium text-sm">{ev.titulo}</p>
-                <Badge variant="outline" className="text-xs">{tipoLabel}</Badge>
-                <Badge variant="secondary" className="text-xs">{ORIGEM_LABEL[ev.origem]}</Badge>
+                <Badge variant="outline" className="text-[10px]">{tipoLabel}</Badge>
+                <Badge variant="secondary" className="text-[10px]">{ORIGEM_LABEL[ev.origem] ?? ev.origem}</Badge>
+                {showViagemLink && viagem && (
+                  <Link
+                    to="/viagens/$id"
+                    params={{ id: viagem.id }}
+                    className="font-mono text-xs text-brand-blue font-bold hover:underline"
+                  >
+                    #{String(viagem.numero_viagem).padStart(5, "0")}
+                  </Link>
+                )}
               </div>
               {ev.descricao && (
-                <p className="text-sm text-muted-foreground mt-1">{ev.descricao}</p>
+                <p className="text-sm text-muted-foreground">{ev.descricao}</p>
               )}
               {ev.status_novo && (
-                <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
                   <span className="text-xs text-muted-foreground">Status:</span>
                   {ev.status_anterior && (
                     <>

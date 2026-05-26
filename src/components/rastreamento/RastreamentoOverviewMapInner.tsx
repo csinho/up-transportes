@@ -8,12 +8,12 @@ import { ViagemStatusBadge } from "@/components/viagem/ViagemStatusBadge";
 import { Button } from "@/components/ui/button";
 import { formatarDataHora } from "@/lib/viagem-progresso";
 
-function divIcon(label: string, bg: string, selected: boolean) {
-  const size = selected ? 36 : 30;
-  const ring = selected ? "box-shadow:0 0 0 3px #2563eb;" : "";
+function truckMarkerIcon(selected: boolean) {
+  const size = selected ? 40 : 34;
+  const ring = selected ? "box-shadow:0 0 0 3px #1E5BFF;" : "box-shadow:0 2px 6px rgba(11,19,36,.2);";
   return L.divIcon({
     className: "leaflet-div-icon-custom",
-    html: `<div style="background:${bg};color:#fff;border-radius:50%;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;border:2px solid #fff;${ring}">${label}</div>`,
+    html: `<div style="background:#F97316;color:#fff;border-radius:8px;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;${ring}"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18h2"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></div>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
   });
@@ -77,25 +77,27 @@ export function RastreamentoOverviewMapInner({
 
       {marcadores.map((m) => {
         const selected = m.viagemId === selecionadaId;
-        const label = String(m.numeroViagem).slice(-2).padStart(2, "0");
         return (
           <Marker
             key={m.viagemId}
             position={m.posicao}
-            icon={divIcon(label, selected ? "#2563eb" : "#64748b", selected)}
+            icon={truckMarkerIcon(selected)}
             eventHandlers={{ click: () => onSelecionar(m.viagemId) }}
           >
             <Popup>
-              <div className="min-w-[180px] space-y-2 text-sm">
-                <p className="font-mono font-bold">#{String(m.numeroViagem).padStart(5, "0")}</p>
+              <div className="min-w-[200px] space-y-2 text-sm">
+                <p className="font-mono font-bold text-brand-blue">#{String(m.numeroViagem).padStart(5, "0")}</p>
                 <ViagemStatusBadge status={m.status} size="sm" />
                 <p className="text-xs text-muted-foreground">
                   {m.motorista ?? "—"} · {m.placa ?? "—"}
                 </p>
+                {m.origem && m.destino && (
+                  <p className="text-xs">{m.origem} → {m.destino}</p>
+                )}
                 {m.velocidade != null && <p className="text-xs">{m.velocidade} km/h</p>}
                 {m.registradoEm && (
                   <p className="text-xs text-muted-foreground">
-                    Atualizado {formatarDataHora(m.registradoEm)}
+                    Atualizado {formatarDataHora(new Date(m.registradoEm))}
                   </p>
                 )}
                 <Button

@@ -1,5 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { PageHeader } from "@/components/operacional/PageHeader";
+import { ViagemRouteLabel } from "@/components/operacional/ViagemRouteLabel";
 import {
   useViagens,
   useSaveViagem,
@@ -23,7 +27,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ViagemStatusBadge } from "@/components/viagem/ViagemStatusBadge";
-import { Plus, Eye, Trash2 } from "lucide-react";
+import { Plus, Eye, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { useConfirm } from "@/hooks/use-confirm";
 import { useListControls } from "@/hooks/use-list-controls";
@@ -58,6 +62,19 @@ function Page() {
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<Viagem | null>(null);
+  const [sortUpdated, setSortUpdated] = useState<"desc" | "asc">("desc");
+
+  const viagensOrdenadas = useMemo(() => {
+    return [...viagens].sort((a, b) => {
+      const ta = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+      const tb = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+      return sortUpdated === "desc" ? tb - ta : ta - tb;
+    });
+  }, [viagens, sortUpdated]);
+
+  const toggleSortUpdated = () => {
+    setSortUpdated((s) => (s === "desc" ? "asc" : "desc"));
+  };
 
   const motoristasDisponiveis = useMemo(
     () => filtrarMotoristasDisponiveis(motoristas, viagens, form?.id),
@@ -80,7 +97,7 @@ function Page() {
   );
 
   const list = useListControls({
-    items: viagens,
+    items: viagensOrdenadas,
     searchFn: (v, q) => {
       const co = clientes.find((c) => c.id === v.cliente_origem_id);
       const cd = clientes.find((c) => c.id === v.cliente_destino_id);
@@ -195,17 +212,17 @@ function Page() {
   return (
     <div className="space-y-4">
       <ConfirmDialogHost />
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Viagens</h1>
-          <p className="text-sm text-muted-foreground">
-            Módulo central da operação · crie, acompanhe e finalize viagens · {viagens.length} cadastradas
-          </p>
-        </div>
-        <Button onClick={novo}><Plus className="h-4 w-4 mr-2" /> Nova viagem</Button>
-      </div>
+      <PageHeader
+        title="Viagens"
+        description={`Módulo central da operação · ${viagens.length} viagens cadastradas`}
+        actions={
+          <Button variant="brand" onClick={novo}>
+            <Plus className="h-4 w-4 mr-2" /> Nova viagem
+          </Button>
+        }
+      />
 
-      <div className="rounded-lg border bg-card">
+      <div className="rounded-2xl border bg-card shadow-card overflow-hidden">
         <div className="p-4 border-b">
           <ListToolbar
             search={list.search}
@@ -225,13 +242,29 @@ function Page() {
         </div>
         <Table>
           <TableHeader><TableRow>
-            <TableHead>Nº</TableHead><TableHead>Origem → Destino</TableHead>
+            <TableHead>Nº</TableHead><TableHead>Rota</TableHead>
             <TableHead>Motorista</TableHead><TableHead>Veículo</TableHead>
-            <TableHead>Produto</TableHead><TableHead>Status</TableHead><TableHead className="w-[140px]"></TableHead>
+            <TableHead>Produto</TableHead>            <TableHead>Status</TableHead>
+            <TableHead>
+              <button
+                type="button"
+                onClick={toggleSortUpdated}
+                className="inline-flex items-center gap-1 font-medium hover:text-brand-blue transition-colors"
+                title={sortUpdated === "desc" ? "Mais recentes primeiro" : "Mais antigas primeiro"}
+              >
+                Atualizado
+                {sortUpdated === "desc" ? (
+                  <ArrowDown className="h-3.5 w-3.5" />
+                ) : (
+                  <ArrowUp className="h-3.5 w-3.5" />
+                )}
+              </button>
+            </TableHead>
+            <TableHead className="w-[100px]"></TableHead>
           </TableRow></TableHeader>
           <TableBody>
             {list.totalItems === 0 && (
-              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                 {list.hasActiveFilters ? "Nenhuma viagem encontrada." : "Nenhuma viagem."}
               </TableCell></TableRow>
             )}
@@ -242,18 +275,29 @@ function Page() {
               const ve = veiculos.find((x) => x.id === v.veiculo_principal_id);
               const p = produtos.find((x) => x.id === v.produto_carga_id);
               return (
-                <TableRow key={v.id}>
-                  <TableCell className="font-mono">
+                <TableRow key={v.id} className="hover:bg-[#F4F7FB] transition-colors">
+                  <TableCell className="font-mono font-bold text-brand-blue">
                     <Link to="/viagens/$id" params={{ id: v.id }} className="hover:underline">
                       #{String(v.numero_viagem).padStart(5, "0")}
                     </Link>
                   </TableCell>
-                  <TableCell>{co?.nome ?? "—"} → {cd?.nome ?? "—"}</TableCell>
+                  <TableCell className="max-w-[220px]">
+                    <ViagemRouteLabel
+                      origem={co?.nome ?? v.endereco_origem?.cidade ?? "—"}
+                      destino={cd?.nome ?? v.endereco_destino?.cidade ?? "—"}
+                      compact
+                    />
+                  </TableCell>
                   <TableCell>{m?.nome ?? "—"}</TableCell>
-                  <TableCell>{ve?.placa ?? "—"}</TableCell>
+                  <TableCell className="font-mono text-sm">{ve?.placa ?? "—"}</TableCell>
                   <TableCell>{p?.nome ?? "—"}</TableCell>
                   <TableCell>
                     <ViagemStatusBadge status={v.status} />
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                    {v.updated_at
+                      ? formatDistanceToNow(new Date(v.updated_at), { addSuffix: true, locale: ptBR })
+                      : "—"}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
@@ -281,104 +325,132 @@ function Page() {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Nova viagem #{form ? String(form.numero_viagem).padStart(5, "0") : ""}</DialogTitle></DialogHeader>
           {form && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <div>
-                  <Label>Status</Label>
-                  <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as StatusViagem })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{STATUS_VIAGEM.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
-                  </Select>
+            <div className="space-y-6">
+              <FormSection title="Status">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  <div>
+                    <Label>Status</Label>
+                    <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as StatusViagem })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>{STATUS_VIAGEM.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div>
-                  <Label>Motorista</Label>
-                  <Select value={form.motorista_id ?? ""} onValueChange={(v) => setForm({ ...form, motorista_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent>
-                      {motoristasDisponiveis.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {motoristasDisponiveis.length === 0 && (
-                    <p className="text-xs text-muted-foreground mt-1">Todos os motoristas estão em viagens ativas.</p>
-                  )}
+              </FormSection>
+
+              <FormSection title="Equipe e veículos">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  <div>
+                    <Label>Motorista</Label>
+                    <Select value={form.motorista_id ?? ""} onValueChange={(v) => setForm({ ...form, motorista_id: v })}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        {motoristasDisponiveis.map((m) => (
+                          <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {motoristasDisponiveis.length === 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">Todos os motoristas estão em viagens ativas.</p>
+                    )}
+                  </div>
+                  <div>
+                    <Label>Veículo principal (tração)</Label>
+                    <Select
+                      value={form.veiculo_principal_id ?? ""}
+                      onValueChange={(v) =>
+                        setForm({
+                          ...form,
+                          veiculo_principal_id: v,
+                          veiculo_reboque_id: form.veiculo_reboque_id === v ? undefined : form.veiculo_reboque_id,
+                        })
+                      }
+                    >
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        {veiculosTracaoDisponiveis.map((x) => (
+                          <SelectItem key={x.id} value={x.id}>{x.placa} — {x.tipo_veiculo}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {veiculosTracaoDisponiveis.length === 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Nenhum cavalo/truck disponível (livre de viagem ativa e status operacional).
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <Label>Reboque / carreta (implemento)</Label>
+                    <Select value={form.veiculo_reboque_id ?? ""} onValueChange={(v) => setForm({ ...form, veiculo_reboque_id: v })}>
+                      <SelectTrigger><SelectValue placeholder="(opcional)" /></SelectTrigger>
+                      <SelectContent>
+                        {reboquesDisponiveis.map((x) => (
+                          <SelectItem key={x.id} value={x.id}>{x.placa} — {x.tipo_veiculo}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {reboquesDisponiveis.length === 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">Nenhum implemento disponível no momento.</p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <Label>Veículo principal (tração)</Label>
-                  <Select
-                    value={form.veiculo_principal_id ?? ""}
-                    onValueChange={(v) =>
-                      setForm({
-                        ...form,
-                        veiculo_principal_id: v,
-                        veiculo_reboque_id: form.veiculo_reboque_id === v ? undefined : form.veiculo_reboque_id,
-                      })
-                    }
-                  >
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent>
-                      {veiculosTracaoDisponiveis.map((x) => (
-                        <SelectItem key={x.id} value={x.id}>{x.placa} — {x.tipo_veiculo}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {veiculosTracaoDisponiveis.length === 0 && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Nenhum cavalo/truck disponível (livre de viagem ativa e status operacional).
-                    </p>
-                  )}
+              </FormSection>
+
+              <FormSection title="Clientes">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label>Cliente origem</Label>
+                    <Select value={form.cliente_origem_id ?? ""} onValueChange={(v) => aplicarEnderecoCliente(v, "origem")}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>{clientes.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Cliente destino</Label>
+                    <Select value={form.cliente_destino_id ?? ""} onValueChange={(v) => aplicarEnderecoCliente(v, "destino")}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>{clientes.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div>
-                  <Label>Reboque / carreta (implemento)</Label>
-                  <Select value={form.veiculo_reboque_id ?? ""} onValueChange={(v) => setForm({ ...form, veiculo_reboque_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="(opcional)" /></SelectTrigger>
-                    <SelectContent>
-                      {reboquesDisponiveis.map((x) => (
-                        <SelectItem key={x.id} value={x.id}>{x.placa} — {x.tipo_veiculo}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {reboquesDisponiveis.length === 0 && (
-                    <p className="text-xs text-muted-foreground mt-1">Nenhum implemento disponível no momento.</p>
-                  )}
+              </FormSection>
+
+              <FormSection title="Carga">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div>
+                    <Label>Produto / Carga</Label>
+                    <Select value={form.produto_carga_id ?? ""} onValueChange={(v) => setForm({ ...form, produto_carga_id: v })}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>{produtos.map(p => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div><Label>Quantidade</Label><Input type="number" value={form.quantidade ?? ""} onChange={(e) => setForm({ ...form, quantidade: Number(e.target.value) || undefined })} /></div>
+                  <div>
+                    <Label>Unidade</Label>
+                    <Select value={form.unidade_medida ?? ""} onValueChange={(v) => setForm({ ...form, unidade_medida: v as Viagem["unidade_medida"] })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>{UNIDADES_MEDIDA.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div><Label>Peso bruto (kg)</Label><Input type="number" value={form.peso_bruto ?? ""} onChange={(e) => setForm({ ...form, peso_bruto: Number(e.target.value) || undefined })} /></div>
+                  <div><Label>Peso líquido (kg)</Label><Input type="number" value={form.peso_liquido ?? ""} onChange={(e) => setForm({ ...form, peso_liquido: Number(e.target.value) || undefined })} /></div>
                 </div>
-                <div>
-                  <Label>Cliente origem</Label>
-                  <Select value={form.cliente_origem_id ?? ""} onValueChange={(v) => aplicarEnderecoCliente(v, "origem")}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent>{clientes.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
-                  </Select>
+              </FormSection>
+
+              <FormSection title="Financeiro">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div><Label>Valor do frete</Label><Input type="number" step="0.01" value={form.valor_frete ?? ""} onChange={(e) => setForm({ ...form, valor_frete: Number(e.target.value) || undefined })} /></div>
+                  <div><Label>Forma de pagamento</Label><Input value={form.forma_pagamento ?? ""} onChange={(e) => setForm({ ...form, forma_pagamento: e.target.value })} /></div>
                 </div>
-                <div>
-                  <Label>Cliente destino</Label>
-                  <Select value={form.cliente_destino_id ?? ""} onValueChange={(v) => aplicarEnderecoCliente(v, "destino")}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent>{clientes.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
-                  </Select>
+              </FormSection>
+
+              <FormSection title="Datas previstas">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div><Label>Saída prevista</Label><Input type="date" value={form.data_prevista_saida ?? ""} onChange={(e) => setForm({ ...form, data_prevista_saida: e.target.value })} /></div>
+                  <div><Label>Chegada prevista</Label><Input type="date" value={form.data_prevista_chegada ?? ""} onChange={(e) => setForm({ ...form, data_prevista_chegada: e.target.value })} /></div>
                 </div>
-                <div>
-                  <Label>Produto / Carga</Label>
-                  <Select value={form.produto_carga_id ?? ""} onValueChange={(v) => setForm({ ...form, produto_carga_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent>{produtos.map(p => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div><Label>Quantidade</Label><Input type="number" value={form.quantidade ?? ""} onChange={(e) => setForm({ ...form, quantidade: Number(e.target.value) || undefined })} /></div>
-                <div>
-                  <Label>Unidade</Label>
-                  <Select value={form.unidade_medida ?? ""} onValueChange={(v) => setForm({ ...form, unidade_medida: v as Viagem["unidade_medida"] })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{UNIDADES_MEDIDA.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div><Label>Peso bruto (kg)</Label><Input type="number" value={form.peso_bruto ?? ""} onChange={(e) => setForm({ ...form, peso_bruto: Number(e.target.value) || undefined })} /></div>
-                <div><Label>Peso líquido (kg)</Label><Input type="number" value={form.peso_liquido ?? ""} onChange={(e) => setForm({ ...form, peso_liquido: Number(e.target.value) || undefined })} /></div>
-                <div><Label>Valor do frete</Label><Input type="number" step="0.01" value={form.valor_frete ?? ""} onChange={(e) => setForm({ ...form, valor_frete: Number(e.target.value) || undefined })} /></div>
-                <div><Label>Forma de pagamento</Label><Input value={form.forma_pagamento ?? ""} onChange={(e) => setForm({ ...form, forma_pagamento: e.target.value })} /></div>
-                <div><Label>Saída prevista</Label><Input type="date" value={form.data_prevista_saida ?? ""} onChange={(e) => setForm({ ...form, data_prevista_saida: e.target.value })} /></div>
-                <div><Label>Chegada prevista</Label><Input type="date" value={form.data_prevista_chegada ?? ""} onChange={(e) => setForm({ ...form, data_prevista_chegada: e.target.value })} /></div>
-              </div>
+              </FormSection>
+
               <p className="text-xs text-muted-foreground">
                 Endereços de origem/destino preenchidos automaticamente do cliente. Edite na tela de detalhes da viagem após criar.
               </p>
@@ -391,5 +463,14 @@ function Page() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-3">
+      <h3 className="text-sm font-semibold font-display text-foreground border-b pb-2">{title}</h3>
+      {children}
+    </section>
   );
 }

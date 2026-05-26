@@ -13,6 +13,8 @@ export type MarcadorViagemOverview = {
   statusLabel: string;
   velocidade?: number;
   registradoEm?: string;
+  origem?: string;
+  destino?: string;
 };
 
 export function listarMarcadoresRastreaveis(
@@ -43,6 +45,8 @@ export function listarMarcadoresRastreaveis(
         statusLabel: STATUS_VIAGEM.find((s) => s.value === v.status)?.label ?? v.status,
         velocidade: ultima.velocidade_kmh,
         registradoEm: ultima.registrado_em,
+        origem: v.endereco_origem?.cidade,
+        destino: v.endereco_destino?.cidade,
       };
     })
     .filter((m): m is MarcadorViagemOverview => m != null);

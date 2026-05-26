@@ -3,79 +3,67 @@ import { STATUS_VIAGEM } from "@/types";
 
 export type ViagemStatusStyle = {
   label: string;
-  /** Tag colorida (fundo claro + texto escuro) */
   badge: string;
-  /** Card neutro — sem tinta no fundo */
   card: string;
-  /** Barra ~4px na borda direita (PWA motorista) */
   accentRight: string;
-  /** Barra ~4px na borda esquerda (ERP dashboard) */
   accentLeft: string;
-  /** @deprecated Use accentLeft — compatibilidade */
   accent: string;
 };
 
-const CARD_NEUTRAL = "bg-card border border-border shadow-sm";
+const CARD_NEUTRAL = "bg-card border border-border shadow-card";
 
 export const VIAGEM_STATUS_STYLES: Record<StatusViagem, ViagemStatusStyle> = {
   planejada: {
     label: "Planejada",
-    badge:
-      "border-indigo-500 bg-indigo-100 text-indigo-900 dark:border-indigo-500 dark:bg-indigo-100 dark:text-indigo-900",
+    badge: "border-blue-500 bg-blue-50 text-blue-800",
     card: CARD_NEUTRAL,
-    accentRight: "border-r-4 border-r-indigo-500",
-    accentLeft: "border-l-4 border-l-indigo-500",
-    accent: "border-l-4 border-l-indigo-500",
+    accentRight: "border-r-4 border-r-blue-500",
+    accentLeft: "border-l-4 border-l-blue-500",
+    accent: "border-l-4 border-l-blue-500",
   },
   aguardando_carregamento: {
     label: "Aguardando carregamento",
-    badge:
-      "border-yellow-500 bg-yellow-100 text-yellow-900 dark:border-yellow-500 dark:bg-yellow-100 dark:text-yellow-900",
+    badge: "border-violet-500 bg-violet-50 text-violet-900",
     card: CARD_NEUTRAL,
-    accentRight: "border-r-4 border-r-yellow-500",
-    accentLeft: "border-l-4 border-l-yellow-500",
-    accent: "border-l-4 border-l-yellow-500",
+    accentRight: "border-r-4 border-r-violet-500",
+    accentLeft: "border-l-4 border-l-violet-500",
+    accent: "border-l-4 border-l-violet-500",
   },
   em_carregamento: {
     label: "Em carregamento",
-    badge:
-      "border-orange-500 bg-orange-100 text-orange-900 dark:border-orange-500 dark:bg-orange-100 dark:text-orange-900",
+    badge: "border-amber-500 bg-amber-50 text-amber-900",
+    card: CARD_NEUTRAL,
+    accentRight: "border-r-4 border-r-amber-500",
+    accentLeft: "border-l-4 border-l-amber-500",
+    accent: "border-l-4 border-l-amber-500",
+  },
+  em_transito: {
+    label: "Em trânsito",
+    badge: "border-orange-500 bg-orange-50 text-orange-900",
     card: CARD_NEUTRAL,
     accentRight: "border-r-4 border-r-orange-500",
     accentLeft: "border-l-4 border-l-orange-500",
     accent: "border-l-4 border-l-orange-500",
   },
-  em_transito: {
-    label: "Em trânsito",
-    badge:
-      "border-blue-600 bg-blue-100 text-blue-900 dark:border-blue-600 dark:bg-blue-100 dark:text-blue-900",
-    card: CARD_NEUTRAL,
-    accentRight: "border-r-4 border-r-blue-600",
-    accentLeft: "border-l-4 border-l-blue-600",
-    accent: "border-l-4 border-l-blue-600",
-  },
   parada: {
     label: "Parada",
-    badge:
-      "border-purple-500 bg-purple-100 text-purple-900 dark:border-purple-500 dark:bg-purple-100 dark:text-purple-900",
+    badge: "border-red-400 bg-red-50 text-red-800",
     card: CARD_NEUTRAL,
-    accentRight: "border-r-4 border-r-purple-500",
-    accentLeft: "border-l-4 border-l-purple-500",
-    accent: "border-l-4 border-l-purple-500",
+    accentRight: "border-r-4 border-r-red-400",
+    accentLeft: "border-l-4 border-l-red-400",
+    accent: "border-l-4 border-l-red-400",
   },
   em_descarga: {
     label: "Em descarga",
-    badge:
-      "border-cyan-500 bg-cyan-100 text-cyan-900 dark:border-cyan-500 dark:bg-cyan-100 dark:text-cyan-900",
+    badge: "border-teal-600 bg-teal-50 text-teal-900",
     card: CARD_NEUTRAL,
-    accentRight: "border-r-4 border-r-cyan-500",
-    accentLeft: "border-l-4 border-l-cyan-500",
-    accent: "border-l-4 border-l-cyan-500",
+    accentRight: "border-r-4 border-r-teal-600",
+    accentLeft: "border-l-4 border-l-teal-600",
+    accent: "border-l-4 border-l-teal-600",
   },
   finalizada: {
     label: "Finalizada",
-    badge:
-      "border-green-500 bg-green-100 text-green-900 dark:border-green-500 dark:bg-green-100 dark:text-green-900",
+    badge: "border-green-500 bg-green-50 text-green-800",
     card: CARD_NEUTRAL,
     accentRight: "border-r-4 border-r-green-500",
     accentLeft: "border-l-4 border-l-green-500",
@@ -83,21 +71,19 @@ export const VIAGEM_STATUS_STYLES: Record<StatusViagem, ViagemStatusStyle> = {
   },
   cancelada: {
     label: "Cancelada",
-    badge:
-      "border-red-500 bg-red-100 text-red-900 dark:border-red-500 dark:bg-red-100 dark:text-red-900",
+    badge: "border-slate-400 bg-slate-100 text-slate-700",
+    card: CARD_NEUTRAL,
+    accentRight: "border-r-4 border-r-slate-400",
+    accentLeft: "border-l-4 border-l-slate-400",
+    accent: "border-l-4 border-l-slate-400",
+  },
+  com_ocorrencia: {
+    label: "Com ocorrência",
+    badge: "border-red-500 bg-red-50 text-red-800",
     card: CARD_NEUTRAL,
     accentRight: "border-r-4 border-r-red-500",
     accentLeft: "border-l-4 border-l-red-500",
     accent: "border-l-4 border-l-red-500",
-  },
-  com_ocorrencia: {
-    label: "Com ocorrência",
-    badge:
-      "border-pink-500 bg-pink-100 text-pink-900 dark:border-pink-500 dark:bg-pink-100 dark:text-pink-900",
-    card: CARD_NEUTRAL,
-    accentRight: "border-r-4 border-r-pink-500",
-    accentLeft: "border-l-4 border-l-pink-500",
-    accent: "border-l-4 border-l-pink-500",
   },
 };
 

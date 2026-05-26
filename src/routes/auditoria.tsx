@@ -9,8 +9,10 @@ import {
 } from "@/data/store";
 import { AuditoriaEventosList } from "@/components/auditoria/AuditoriaEventosList";
 import { AuditoriaOcorrenciasList } from "@/components/auditoria/AuditoriaOcorrenciasList";
+import { PageHeader } from "@/components/operacional/PageHeader";
+import { KpiCard } from "@/components/operacional/KpiCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { History, AlertTriangle } from "lucide-react";
+import { History, AlertTriangle, Users, UserCog, FileWarning } from "lucide-react";
 
 export const Route = createFileRoute("/auditoria")({
   beforeLoad: () => requireErpRoles("owner"),
@@ -36,41 +38,22 @@ function Page() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <History className="h-7 w-7" />
-          Histórico e auditoria
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Linha do tempo de eventos e ocorrências de todas as viagens da transportadora.
-        </p>
-      </div>
+      <PageHeader
+        title="Histórico e auditoria"
+        description="Linha do tempo de eventos e ocorrências de todas as viagens da transportadora."
+      />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Total de eventos</p>
-            <p className="text-2xl font-bold">{eventos.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Via motorista (app)</p>
-            <p className="text-2xl font-bold">{eventosMotorista}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Via operador (ERP)</p>
-            <p className="text-2xl font-bold">{eventosOperador}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Ocorrências abertas</p>
-            <p className="text-2xl font-bold text-amber-600">{ocorrenciasAbertas}</p>
-          </CardContent>
-        </Card>
+        <KpiCard icon={History} label="Total de eventos" value={eventos.length} accent="blue" />
+        <KpiCard icon={Users} label="Via motorista (app)" value={eventosMotorista} accent="green" />
+        <KpiCard icon={UserCog} label="Via operador (ERP)" value={eventosOperador} accent="navy" />
+        <KpiCard
+          icon={FileWarning}
+          label="Ocorrências abertas"
+          value={ocorrenciasAbertas}
+          accent="amber"
+          alert={ocorrenciasAbertas > 0}
+        />
       </div>
 
       <Card>
@@ -82,7 +65,7 @@ function Page() {
             eventos={eventos}
             viagens={viagens}
             transportadora={transportadora}
-            variant="auditoria"
+            variant="timeline"
           />
         </CardContent>
       </Card>

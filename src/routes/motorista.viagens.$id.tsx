@@ -19,6 +19,7 @@ import { ViagemEventosTimeline } from "@/components/viagem/ViagemEventosTimeline
 import { useMotoristaSession } from "@/hooks/use-motorista-session";
 import { calcularProgressoViagem } from "@/lib/viagem-progresso";
 import { isStatusComRastreamentoGps } from "@/lib/viagem-geolocalizacao-constants";
+import { isViagemAtiva } from "@/lib/viagem-recursos";
 import { fmtMoeda } from "@/lib/motorista-app-path";
 import { ViagemStatusBadge } from "@/components/viagem/ViagemStatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,6 +98,7 @@ function Page() {
   const clienteDestino = clientes.find((c) => c.id === form.cliente_destino_id);
   const progresso = calcularProgressoViagem(form, localizacoes);
   const gpsAtivo = isStatusComRastreamentoGps(form.status);
+  const rastreando = isViagemAtiva(form.status);
 
   return (
     <MotoristaShell

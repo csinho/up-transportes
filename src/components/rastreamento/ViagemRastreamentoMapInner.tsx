@@ -18,9 +18,17 @@ function divIcon(label: string, bg: string, size = 32) {
   });
 }
 
-const iconOrigem = divIcon("A", "#16a34a");
-const iconDestino = divIcon("B", "#dc2626");
-const iconVeiculo = divIcon("●", "#2563eb", 28);
+const iconOrigem = divIcon("A", "#22C55E");
+const iconDestino = divIcon("B", "#EF4444");
+
+function truckIcon() {
+  return L.divIcon({
+    className: "leaflet-div-icon-custom",
+    html: `<div style="background:#F97316;color:#fff;border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 8px rgba(11,19,36,.25)"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18h2"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></div>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+  });
+}
 
 function FitBounds({ points, tripId, revision }: { points: LatLng[]; tripId: string; revision: string }) {
   const map = useMap();
@@ -133,7 +141,7 @@ export function ViagemRastreamentoMapInner({ dados, className }: ViagemRastreame
         <Marker
           key={`${posicaoAtual[0]}-${posicaoAtual[1]}`}
           position={posicaoAtual}
-          icon={iconVeiculo}
+          icon={truckIcon()}
         >
           <Popup>
             <PopupConteudo dados={dados} />

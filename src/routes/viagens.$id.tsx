@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
   useViagem,
   useSaveViagem,
@@ -16,8 +16,8 @@ import {
 import { generateUuid } from "@/lib/uuid";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ViagemStatusBadge } from "@/components/viagem/ViagemStatusBadge";
-import { ArrowLeft, FileText, Flag, Save, MapPin } from "lucide-react";
+import { ViagemOperacionalHeader } from "@/components/viagem/ViagemOperacionalHeader";
+import { GpsStatusPanel } from "@/components/viagem/GpsStatusPanel";
 import { AddressForm } from "@/components/AddressForm";
 import { DocumentUploader } from "@/components/DocumentUploader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -150,27 +150,18 @@ function Page() {
 
   return (
     <div className="space-y-4 max-w-6xl">
-      <div className="flex justify-between items-start gap-4">
-        <div>
-          <Button variant="ghost" size="sm" asChild><Link to="/viagens"><ArrowLeft className="h-4 w-4 mr-1" /> Voltar</Link></Button>
-          <h1 className="text-2xl font-bold mt-2">Viagem #{String(form.numero_viagem).padStart(5, "0")}</h1>
-          <div className="flex gap-2 items-center mt-1">
-            <ViagemStatusBadge status={form.status} />
-            <span className="text-sm text-muted-foreground">
-              {cOrigem?.nome ?? "—"} → {cDestino?.nome ?? "—"}
-            </span>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          {podeFinalizar && (
-            <Button variant="destructive" onClick={() => setFinalizarOpen(true)}>
-              <Flag className="h-4 w-4 mr-2" /> Finalizar viagem
-            </Button>
-          )}
-          <Button onClick={handleSave} variant="outline"><Save className="h-4 w-4 mr-2" /> Salvar</Button>
-          <Button onClick={handlePdf}><FileText className="h-4 w-4 mr-2" /> Gerar PDF</Button>
-        </div>
-      </div>
+      <ViagemOperacionalHeader
+        viagem={form}
+        origemLabel={cOrigem?.nome ?? form.endereco_origem.cidade}
+        destinoLabel={cDestino?.nome ?? form.endereco_destino.cidade}
+        motoristaNome={motorista?.nome}
+        veiculoPlaca={vPrincipal?.placa}
+        podeFinalizar={podeFinalizar}
+        onFinalizar={() => setFinalizarOpen(true)}
+        onSalvar={handleSave}
+        onPdf={handlePdf}
+        salvando={save.isPending}
+      />
 
       <FinalizarViagemDialog
         open={finalizarOpen}
@@ -274,22 +265,25 @@ function Page() {
         </TabsContent>
 
         <TabsContent value="localizacao" className="space-y-4">
-          {isViagemRastreavel(form.status) && (
-            <Card>
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+            <Card className="overflow-hidden">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  Mapa da viagem
-                </CardTitle>
+                <CardTitle className="text-base">Mapa da viagem</CardTitle>
               </CardHeader>
               <CardContent>
-                <ViagemRastreamentoMap dados={dadosMapa} className="h-[360px]" />
+                <ViagemRastreamentoMap dados={dadosMapa} className="h-[420px] min-h-[320px]" />
                 <p className="text-xs text-muted-foreground mt-2">
-                  Atualização automática enquanto o motorista envia GPS pelo app.
+                  {isViagemRastreavel(form.status)
+                    ? "Atualização automática enquanto o motorista envia GPS pelo app."
+                    : "Rota planejada (origem e destino). Posição GPS aparece quando a viagem estiver em andamento."}
                 </p>
               </CardContent>
             </Card>
-          )}
+            <GpsStatusPanel
+              localizacoes={localizacoes}
+              rastreavel={isViagemRastreavel(form.status)}
+            />
+          </div>
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Histórico de localização</CardTitle>

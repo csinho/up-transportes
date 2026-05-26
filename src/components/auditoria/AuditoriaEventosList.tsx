@@ -71,7 +71,21 @@ export function AuditoriaEventosList({
   };
 
   if (variant === "timeline") {
-    return <ViagemEventosTimeline eventos={eventos} />;
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">
+            {eventos.length} registro{eventos.length !== 1 ? "s" : ""}
+          </p>
+          <AuditoriaExportButtons
+            itemCount={eventos.length}
+            onCsv={() => exportar("csv")}
+            onPdf={() => exportar("pdf")}
+          />
+        </div>
+        <ViagemEventosTimeline eventos={eventos} viagens={viagens} showViagemLink />
+      </div>
+    );
   }
 
   if (eventos.length === 0) {

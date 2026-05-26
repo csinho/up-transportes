@@ -9,14 +9,16 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { usePwaInstall } from "@/hooks/use-pwa-install";
-import { isSecureContextForPwa } from "@/lib/pwa-utils";
+import { cn } from "@/lib/utils";
 
 type Props = {
   /** Botão compacto no header */
   variant?: "button" | "card";
+  /** Header escuro do PWA motorista */
+  onDarkHeader?: boolean;
 };
 
-export function MotoristaInstalarPwa({ variant = "button" }: Props) {
+export function MotoristaInstalarPwa({ variant = "button", onDarkHeader }: Props) {
   const { isIos, isStandalone, canPromptInstall, install } = usePwaInstall();
 
   if (isStandalone) return null;
@@ -115,7 +117,15 @@ export function MotoristaInstalarPwa({ variant = "button" }: Props) {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8 px-2.5">
+        <Button
+          variant="outline"
+          size="sm"
+          className={cn(
+            "gap-1.5 text-xs h-8 px-2.5",
+            onDarkHeader &&
+              "border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white",
+          )}
+        >
           <Download className="h-3.5 w-3.5" />
           Instalar
         </Button>

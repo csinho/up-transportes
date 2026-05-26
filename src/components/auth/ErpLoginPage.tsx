@@ -104,9 +104,11 @@ export function ErpLoginPage({ transportadoraId, redirectTo, onSuccess }: Props)
                 <TabsTrigger value="signup">Primeiro acesso</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="login" className="mt-6 space-y-2">
-                <p className="text-sm text-muted-foreground">Já tem conta? Use seu e-mail e senha.</p>
+              <TabsContent value="login" className="mt-6 space-y-4">
                 <ErpLoginForm redirectTo={redirectTo} onSuccess={onSuccess} />
+                <p className="text-sm text-muted-foreground text-center">
+                  Já tem conta? Use seu e-mail e senha.
+                </p>
               </TabsContent>
 
               <TabsContent value="signup" className="mt-6">

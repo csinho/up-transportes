@@ -73,8 +73,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "Mapa da Carga" },
+      { name: "description", content: "Gestão de viagens e rastreamento em tempo real para transportadoras." },
       { name: "author", content: "Lovable" },
       { property: "og:title", content: "Lovable App" },
       { property: "og:description", content: "Lovable Generated Project" },
@@ -214,8 +214,9 @@ function ErpShell() {
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-14 border-b flex items-center justify-between px-4 gap-4">
-            <SidebarTrigger />
+          <div className="h-1 bg-brand-blue shrink-0" aria-hidden />
+          <header className="h-14 border-b border-border bg-card shadow-card flex items-center justify-between px-4 gap-4">
+            <SidebarTrigger className="text-foreground" />
             <div className="flex items-center gap-3">
               <TenantSwitcher />
               {isOwner && <MotoristaAppLinkCopy />}

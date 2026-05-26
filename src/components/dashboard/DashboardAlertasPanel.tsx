@@ -68,8 +68,10 @@ export function DashboardAlertasPanel({ alertas }: Props) {
                   to="/viagens/$id"
                   params={{ id: alerta.viagemId }}
                   className={cn(
-                    "flex items-start gap-3 rounded-md border p-3 hover:bg-muted/50 transition-colors",
-                    alerta.severidade === "critica" && "border-destructive/30 bg-destructive/5",
+                    "flex items-start gap-3 rounded-xl border border-l-4 p-3 hover:bg-white hover:shadow-sm transition-all",
+                    alerta.severidade === "critica" && "border-l-destructive border-destructive/30 bg-destructive/5",
+                    alerta.severidade === "alta" && "border-l-amber-500 bg-amber-50/40",
+                    alerta.severidade === "media" && "border-l-brand-blue/60",
                   )}
                 >
                   <Icon

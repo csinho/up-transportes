@@ -9,6 +9,7 @@ import {
   Route as RouteIcon,
   MapPin,
   History,
+  Map,
 } from "lucide-react";
 import {
   Sidebar,
@@ -52,22 +53,32 @@ function NavGroup({ label, items, path }: { label: string; items: NavItem[]; pat
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>{label}</SidebarGroupLabel>
+      <SidebarGroupLabel className="text-sidebar-foreground/50 uppercase text-[10px] tracking-wider font-semibold">
+        {label}
+      </SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
-          {items.map((item) => (
-            <SidebarMenuItem key={item.url}>
-              <SidebarMenuButton
-                asChild
-                isActive={path === item.url || (item.url !== "/" && path.startsWith(item.url))}
-              >
-                <Link to={item.url}>
-                  <item.icon className="h-4 w-4" />
-                  <span>{item.title}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
+          {items.map((item) => {
+            const isActive =
+              path === item.url || (item.url !== "/" && path.startsWith(item.url));
+            return (
+              <SidebarMenuItem key={item.url}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive}
+                  className={cn(
+                    isActive &&
+                      "!bg-white/10 !text-white border-l-4 border-brand-orange rounded-l-none font-medium",
+                  )}
+                >
+                  <Link to={item.url}>
+                    <item.icon className={cn("h-4 w-4", isActive && "text-brand-orange")} />
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>
@@ -82,36 +93,36 @@ export function AppSidebar() {
   const configFiltrada = config.filter((i) => !i.ownerOnly || canAccessTransportadoraConfig);
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" className="border-sidebar-border">
       <SidebarHeader
         className={cn(
-          "px-4 py-3",
-          "group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-2 group-data-[collapsible=icon]:overflow-hidden",
+          "px-4 py-4 border-b border-sidebar-border",
+          "group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-3 group-data-[collapsible=icon]:overflow-hidden",
         )}
       >
         <div
           className={cn(
-            "flex items-center gap-2 min-w-0",
+            "flex items-center gap-3 min-w-0",
             "group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0",
           )}
         >
           <div
             className={cn(
-              "h-8 w-8 shrink-0 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm",
-              "group-data-[collapsible=icon]:h-6 group-data-[collapsible=icon]:w-6 group-data-[collapsible=icon]:text-xs",
+              "h-10 w-10 shrink-0 rounded-xl bg-brand-blue text-white flex items-center justify-center shadow-md",
+              "group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8",
             )}
           >
-            T
+            <Map className="h-5 w-5 group-data-[collapsible=icon]:h-4 group-data-[collapsible=icon]:w-4" />
           </div>
-          <div className="min-w-0 text-sm group-data-[collapsible=icon]:hidden">
-            <p className="font-semibold leading-none truncate">ERP Transp.</p>
-            <p className="text-xs text-muted-foreground truncate">Operação de viagens</p>
+          <div className="min-w-0 group-data-[collapsible=icon]:hidden">
+            <p className="font-display font-bold leading-tight text-white text-sm">Mapa da Carga</p>
+            <p className="text-[11px] text-sidebar-foreground/70 truncate">Gestão de viagens</p>
           </div>
         </div>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="py-2">
         <NavGroup label="Operação" items={operacaoFiltrada} path={path} />
-        <NavGroup label="Cadastros de apoio" items={cadastros} path={path} />
+        <NavGroup label="Cadastros" items={cadastros} path={path} />
         <NavGroup label="Configurações" items={configFiltrada} path={path} />
       </SidebarContent>
     </Sidebar>
