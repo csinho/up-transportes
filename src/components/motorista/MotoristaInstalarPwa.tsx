@@ -29,9 +29,9 @@ export function MotoristaInstalarPwa({ variant = "button", onDarkHeader }: Props
   const content = (
     <div className="space-y-4 text-sm">
       {!secure && (
-        <p className="rounded-lg bg-amber-500/15 px-3 py-2 text-amber-900 dark:text-amber-100">
-          A instalação só funciona em <strong>HTTPS</strong> (link seguro). Se estiver em preview
-          HTTP, abra o app pelo endereço publicado com cadeado.
+        <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2.5 text-sm text-sky-950 leading-relaxed">
+          A instalação só funciona em <strong className="font-semibold">HTTPS</strong> (link
+          seguro). Se estiver em preview HTTP, abra o app pelo endereço publicado com cadeado.
         </p>
       )}
 

@@ -94,7 +94,7 @@ export function MotoristaShell({
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            <MotoristaInstalarPwa onDarkHeader />
+            {!auth && <MotoristaInstalarPwa onDarkHeader />}
             {!online && pending > 0 && (
               <Badge variant="secondary" className="text-xs gap-1 px-2">
                 <CloudOff className="h-3 w-3" />

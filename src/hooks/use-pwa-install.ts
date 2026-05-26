@@ -6,20 +6,42 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+function readStandalone(): boolean {
+  return isStandalonePwa();
+}
+
 export function usePwaInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [standalone, setStandalone] = useState(false);
 
   useEffect(() => {
-    setStandalone(isStandalonePwa());
+    const sync = () => setStandalone(readStandalone());
+    sync();
 
     const onBip = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
 
+    const onInstalled = () => {
+      setStandalone(true);
+      setDeferredPrompt(null);
+    };
+
+    const mq = window.matchMedia("(display-mode: standalone)");
+    const onDisplayMode = () => sync();
+
     window.addEventListener("beforeinstallprompt", onBip);
-    return () => window.removeEventListener("beforeinstallprompt", onBip);
+    window.addEventListener("appinstalled", onInstalled);
+    document.addEventListener("visibilitychange", sync);
+    mq.addEventListener("change", onDisplayMode);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBip);
+      window.removeEventListener("appinstalled", onInstalled);
+      document.removeEventListener("visibilitychange", sync);
+      mq.removeEventListener("change", onDisplayMode);
+    };
   }, []);
 
   const install = useCallback(async () => {
