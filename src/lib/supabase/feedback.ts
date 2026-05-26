@@ -29,30 +29,30 @@ export async function enviarFeedbackReport(input: EnviarFeedbackInput): Promise<
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error("Supabase não configurado");
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession();
+  if (sessionError) {
+    lancarErroSupabase(sessionError, "Sessão expirada");
+  }
+
+  const user = sessionData.session?.user ?? (await supabase.auth.getUser()).data.user;
   if (!user) throw new Error("Não autenticado");
 
-  const { data: report, error: insertError } = await supabase
-    .from("feedback_reports")
-    .insert({
-      transportadora_id: input.transportadoraId,
-      user_id: user.id,
-      user_email: input.userEmail ?? user.email ?? null,
-      user_nome: input.userNome ?? null,
-      titulo: input.titulo.trim(),
-      descricao: input.descricao.trim(),
-      impacto: input.impacto,
-      pagina_url: input.paginaUrl ?? null,
-      user_agent: input.userAgent ?? null,
-    })
-    .select("id")
-    .single();
+  const feedbackId = crypto.randomUUID();
+
+  const { error: insertError } = await supabase.from("feedback_reports").insert({
+    id: feedbackId,
+    transportadora_id: input.transportadoraId,
+    user_id: user.id,
+    user_email: input.userEmail ?? user.email ?? null,
+    user_nome: input.userNome ?? null,
+    titulo: input.titulo.trim(),
+    descricao: input.descricao.trim(),
+    impacto: input.impacto,
+    pagina_url: input.paginaUrl ?? null,
+    user_agent: input.userAgent ?? null,
+  });
 
   if (insertError) lancarErroSupabase(insertError, "Falha ao enviar feedback");
-
-  const feedbackId = report.id as string;
 
   for (const anexo of input.anexos) {
     const { path } = await uploadFeedbackAnexo({

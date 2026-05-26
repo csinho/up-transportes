@@ -65,6 +65,14 @@ create policy feedback_anexos_insert on public.feedback_anexos
     )
   );
 
+-- Necessário para .select() pós-insert e validação RLS dos anexos
+create policy feedback_reports_select_own on public.feedback_reports
+  for select to authenticated
+  using (
+    user_id = auth.uid()
+    and transportadora_id in (select public.user_transportadora_ids())
+  );
+
 -- Platform admin: leitura de arquivos de feedback no storage
 create policy documentos_platform_admin_select on storage.objects
   for select to authenticated
