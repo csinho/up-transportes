@@ -126,6 +126,38 @@ export class FeedbackScreenRecorder {
     return this.cameraStream;
   }
 
+  get hasMicStream(): boolean {
+    return !!this.micStream;
+  }
+
+  get hasCameraStream(): boolean {
+    return !!this.cameraStream;
+  }
+
+  get isCameraEnabled(): boolean {
+    return this.cameraStream?.getVideoTracks().some((t) => t.enabled) ?? false;
+  }
+
+  async enableCamera(deviceId?: string): Promise<void> {
+    if (this.cameraStream) {
+      this.cameraStream.getVideoTracks().forEach((t) => {
+        t.enabled = true;
+      });
+      return;
+    }
+
+    this.cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: deviceId ? { deviceId: { exact: deviceId } } : true,
+      audio: false,
+    });
+  }
+
+  disableCamera(): void {
+    if (!this.cameraStream) return;
+    this.cameraStream.getTracks().forEach((t) => t.stop());
+    this.cameraStream = null;
+  }
+
   async prepareStreams(setup: RecorderSetup): Promise<void> {
     this.cleanup();
 
