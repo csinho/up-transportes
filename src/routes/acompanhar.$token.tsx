@@ -37,7 +37,20 @@ function Page() {
     );
   }
 
-  if (isError || !data?.valido || !data.viagem) {
+  if (isError) {
+    return (
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center p-6 text-center gap-3">
+        <MapPin className="h-10 w-10 text-muted-foreground" />
+        <h1 className="text-lg font-semibold">Não foi possível carregar o acompanhamento</h1>
+        <p className="text-sm text-muted-foreground max-w-sm">
+          Verifique sua conexão e tente novamente. Se o problema persistir, solicite um novo link à
+          transportadora.
+        </p>
+      </div>
+    );
+  }
+
+  if (!data?.valido || !data.viagem) {
     return (
       <div className="min-h-[100dvh] flex flex-col items-center justify-center p-6 text-center gap-3">
         <MapPin className="h-10 w-10 text-muted-foreground" />

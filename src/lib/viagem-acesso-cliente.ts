@@ -85,12 +85,23 @@ export async function fetchAcompanhamentoCliente(token: string): Promise<Acompan
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error("Supabase não configurado");
 
-  const { data, error } = await supabase.rpc("get_acompanhamento_cliente", {
-    p_token: token,
-  });
-  if (error) lancarErroSupabase(error);
+  const tokenNorm = token.trim();
+  if (!tokenNorm) return { valido: false };
 
-  const raw = data as RpcAcompanhamento | null;
+  const { data, error } = await supabase.rpc("get_acompanhamento_cliente", {
+    p_token: tokenNorm,
+  });
+  if (error) {
+    console.error("[acompanhar] RPC get_acompanhamento_cliente:", error);
+    lancarErroSupabase(error);
+  }
+
+  const parsed =
+    typeof data === "string"
+      ? (JSON.parse(data) as RpcAcompanhamento)
+      : (data as RpcAcompanhamento | null);
+
+  const raw = parsed;
   if (!raw?.valido || !raw.viagem) {
     return { valido: false };
   }
