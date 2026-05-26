@@ -16,6 +16,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TransportadoraFeedbackPanel } from "@/components/plataforma/TransportadoraFeedbackPanel";
 import {
   usePlatformTransportadora,
   useSetTransportadoraAtiva,
@@ -154,6 +156,13 @@ function Page() {
         </Card>
       )}
 
+      <Tabs defaultValue="visao-geral" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="visao-geral">Visão geral</TabsTrigger>
+          <TabsTrigger value="feedback">Feedback</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="visao-geral" className="space-y-6 mt-0">
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -253,6 +262,19 @@ function Page() {
       <p className="text-xs text-muted-foreground">
         Assinaturas Stripe e limites por plano — próxima fase (ver plano.md).
       </p>
+        </TabsContent>
+
+        <TabsContent value="feedback" className="mt-0">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Feedback e bugs reportados</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <TransportadoraFeedbackPanel transportadoraId={data.id} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

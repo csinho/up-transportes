@@ -143,7 +143,7 @@ export async function gerarPdfViagem(args: Args) {
       {
         width: "*",
         stack: [
-          { text: "ORIGEM (A)", style: "tag" },
+          { text: "ORIGEM", style: "tag" },
           { text: clienteOrigem?.nome ?? "—", bold: true, margin: [0, 2, 0, 2] },
           { text: clienteOrigem?.cnpj || clienteOrigem?.cpf || "", style: "muted" },
           { text: enderecoLinha(viagem.endereco_origem), style: "small" },
@@ -153,7 +153,7 @@ export async function gerarPdfViagem(args: Args) {
       {
         width: "*",
         stack: [
-          { text: "DESTINO (B)", style: "tag" },
+          { text: "DESTINO", style: "tag" },
           { text: clienteDestino?.nome ?? "—", bold: true, margin: [0, 2, 0, 2] },
           { text: clienteDestino?.cnpj || clienteDestino?.cpf || "", style: "muted" },
           { text: enderecoLinha(viagem.endereco_destino), style: "small" },

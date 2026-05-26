@@ -16,9 +16,10 @@ import {
 import { generateUuid } from "@/lib/uuid";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { ViagemOperacionalHeader } from "@/components/viagem/ViagemOperacionalHeader";
 import { GpsStatusPanel } from "@/components/viagem/GpsStatusPanel";
-import { AddressForm } from "@/components/AddressForm";
+import { EnderecoResumo } from "@/components/EnderecoResumo";
 import { DocumentUploader } from "@/components/DocumentUploader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -193,8 +194,14 @@ function Page() {
     toast.success("Viagem finalizada");
   };
 
+  const handleDocumentosChange = (documentos: Viagem["documentos"]) => {
+    const updated = { ...form, documentos, updated_at: new Date().toISOString() };
+    setForm(updated);
+    save.mutate(updated);
+  };
+
   return (
-    <div className="space-y-4 max-w-6xl">
+    <div className="space-y-4">
       <ViagemOperacionalHeader
         viagem={form}
         origemLabel={cOrigem?.nome ?? form.endereco_origem.cidade}
@@ -222,7 +229,6 @@ function Page() {
           <TabsTrigger value="eventos">Eventos ({eventos.length})</TabsTrigger>
           <TabsTrigger value="ocorrencias">Ocorrências ({ocorrencias.length})</TabsTrigger>
           <TabsTrigger value="localizacao">Localização ({localizacoes.length})</TabsTrigger>
-          <TabsTrigger value="enderecos">Endereços</TabsTrigger>
           <TabsTrigger value="docs">Documentos</TabsTrigger>
           <TabsTrigger value="obs">Observações</TabsTrigger>
         </TabsList>
@@ -232,6 +238,18 @@ function Page() {
             <ViagemProgressoCard progresso={progresso} />
           ) : null}
           <ViagemAcessoClientePanel viagemId={form.id} numeroViagem={form.numero_viagem} />
+          {form.finalizacao_motivo && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">
+                  {form.finalizacao_origem === "motorista"
+                    ? "Observação do motorista"
+                    : "Observação da finalização"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">{form.finalizacao_motivo}</CardContent>
+            </Card>
+          )}
           {form.status === "finalizada" && form.finalizacao_em && (
             <Card>
               <CardHeader><CardTitle className="text-base">Finalização</CardTitle></CardHeader>
@@ -244,28 +262,49 @@ function Page() {
                 <p className="text-muted-foreground">
                   {format(new Date(form.finalizacao_em), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                 </p>
-                {form.finalizacao_motivo && (
-                  <p className="mt-2"><span className="text-muted-foreground">Motivo:</span> {form.finalizacao_motivo}</p>
-                )}
               </CardContent>
             </Card>
           )}
           <div className="grid md:grid-cols-2 gap-4">
             <Card>
-              <CardHeader><CardTitle className="text-base">Motorista</CardTitle></CardHeader>
-              <CardContent className="text-sm space-y-1">
-                <p><strong>{motorista?.nome ?? "—"}</strong></p>
-                <p className="text-muted-foreground">{motorista?.cpf}</p>
-                <p className="text-muted-foreground">{motorista?.telefone_principal}</p>
-                <p className="text-muted-foreground">CNH: {motorista?.cnh.numero} ({motorista?.cnh.categoria})</p>
+              <CardHeader><CardTitle className="text-base">Motorista e veículos</CardTitle></CardHeader>
+              <CardContent className="text-sm space-y-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Motorista</p>
+                  <p><strong>{motorista?.nome ?? "—"}</strong></p>
+                  <p className="text-muted-foreground">{motorista?.cpf}</p>
+                  <p className="text-muted-foreground">{motorista?.telefone_principal}</p>
+                  <p className="text-muted-foreground">
+                    CNH: {motorista?.cnh.numero ?? "—"} ({motorista?.cnh.categoria ?? "—"})
+                  </p>
+                </div>
+                <Separator />
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Veículo</p>
+                  <p><strong>{vPrincipal?.placa ?? "—"}</strong> — {vPrincipal?.tipo_veiculo ?? "—"}</p>
+                  <p className="text-muted-foreground">RENAVAM: {vPrincipal?.renavam ?? "—"}</p>
+                  {vReboque && (
+                    <p>
+                      Reboque: <strong>{vReboque.placa}</strong> — {vReboque.tipo_veiculo}
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader><CardTitle className="text-base">Veículos</CardTitle></CardHeader>
-              <CardContent className="text-sm space-y-1">
-                <p><strong>{vPrincipal?.placa}</strong> — {vPrincipal?.tipo_veiculo}</p>
-                <p className="text-muted-foreground">RENAVAM: {vPrincipal?.renavam}</p>
-                {vReboque && <p>Reboque: <strong>{vReboque.placa}</strong></p>}
+              <CardHeader><CardTitle className="text-base">Origem e destino</CardTitle></CardHeader>
+              <CardContent className="text-sm space-y-4">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Origem</p>
+                  <p className="font-medium">{cOrigem?.nome ?? "—"}</p>
+                  <EnderecoResumo endereco={form.endereco_origem} className="mt-1" />
+                </div>
+                <Separator />
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Destino</p>
+                  <p className="font-medium">{cDestino?.nome ?? "—"}</p>
+                  <EnderecoResumo endereco={form.endereco_destino} className="mt-1" />
+                </div>
               </CardContent>
             </Card>
             <Card>
@@ -352,37 +391,39 @@ function Page() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="enderecos" className="space-y-4">
-          <Card>
-            <CardHeader><CardTitle className="text-base">Origem (Ponto A) — {cOrigem?.nome ?? "—"}</CardTitle></CardHeader>
-            <CardContent><AddressForm value={form.endereco_origem} onChange={(e) => setForm({ ...form, endereco_origem: e })} /></CardContent>
-          </Card>
-          <Card>
-            <CardHeader><CardTitle className="text-base">Destino (Ponto B) — {cDestino?.nome ?? "—"}</CardTitle></CardHeader>
-            <CardContent><AddressForm value={form.endereco_destino} onChange={(e) => setForm({ ...form, endereco_destino: e })} /></CardContent>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="docs">
           <Card>
             <CardHeader><CardTitle className="text-base">Documentos da viagem</CardTitle></CardHeader>
             <CardContent>
               <DocumentUploader
-                fiscal
+                variant="viagem"
                 documentos={form.documentos}
-                onChange={(d) => setForm({ ...form, documentos: d })}
+                onChange={handleDocumentosChange}
                 uploadContext={{
                   transportadoraId: tenantId,
                   entidade: "viagens",
                   entidadeId: form.id,
                 }}
-                tiposSugeridos={["NF-e", "DANFE", "CT-e", "DACTE", "MDF-e", "DAMDFE", "Nota Fiscal", "Guia", "Ordem de coleta", "Ordem de carregamento", "Comprovante de entrega", "Canhoto"]}
               />
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="obs" className="space-y-4">
+          {form.finalizacao_motivo && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">
+                  {form.finalizacao_origem === "motorista"
+                    ? "Observação do motorista na entrega"
+                    : "Observação da finalização"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {form.finalizacao_motivo}
+              </CardContent>
+            </Card>
+          )}
           <div>
             <Label>Observações operacionais (aparecem no PDF)</Label>
             <Textarea rows={4} value={form.observacoes_operacionais ?? ""} onChange={(e) => setForm({ ...form, observacoes_operacionais: e.target.value })} />

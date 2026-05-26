@@ -35,6 +35,8 @@ import { Route as MotoristaViagensIndexRouteImport } from './routes/motorista.vi
 import { Route as PlataformaTransportadorasNovaRouteImport } from './routes/plataforma.transportadoras.nova'
 import { Route as PlataformaTransportadorasIdRouteImport } from './routes/plataforma.transportadoras.$id'
 import { Route as MotoristaViagensIdRouteImport } from './routes/motorista.viagens.$id'
+import { Route as MotoristaViagensIdIndexRouteImport } from './routes/motorista.viagens.$id.index'
+import { Route as MotoristaViagensIdDetalhesRouteImport } from './routes/motorista.viagens.$id.detalhes'
 
 const ViagensRoute = ViagensRouteImport.update({
   id: '/viagens',
@@ -170,6 +172,17 @@ const MotoristaViagensIdRoute = MotoristaViagensIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => MotoristaViagensRoute,
 } as any)
+const MotoristaViagensIdIndexRoute = MotoristaViagensIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MotoristaViagensIdRoute,
+} as any)
+const MotoristaViagensIdDetalhesRoute =
+  MotoristaViagensIdDetalhesRouteImport.update({
+    id: '/detalhes',
+    path: '/detalhes',
+    getParentRoute: () => MotoristaViagensIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -193,11 +206,13 @@ export interface FileRoutesByFullPath {
   '/motorista/': typeof MotoristaIndexRoute
   '/plataforma/': typeof PlataformaIndexRoute
   '/viagens/': typeof ViagensIndexRoute
-  '/motorista/viagens/$id': typeof MotoristaViagensIdRoute
+  '/motorista/viagens/$id': typeof MotoristaViagensIdRouteWithChildren
   '/plataforma/transportadoras/$id': typeof PlataformaTransportadorasIdRoute
   '/plataforma/transportadoras/nova': typeof PlataformaTransportadorasNovaRoute
   '/motorista/viagens/': typeof MotoristaViagensIndexRoute
   '/plataforma/transportadoras/': typeof PlataformaTransportadorasIndexRoute
+  '/motorista/viagens/$id/detalhes': typeof MotoristaViagensIdDetalhesRoute
+  '/motorista/viagens/$id/': typeof MotoristaViagensIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -216,11 +231,12 @@ export interface FileRoutesByTo {
   '/motorista': typeof MotoristaIndexRoute
   '/plataforma': typeof PlataformaIndexRoute
   '/viagens': typeof ViagensIndexRoute
-  '/motorista/viagens/$id': typeof MotoristaViagensIdRoute
   '/plataforma/transportadoras/$id': typeof PlataformaTransportadorasIdRoute
   '/plataforma/transportadoras/nova': typeof PlataformaTransportadorasNovaRoute
   '/motorista/viagens': typeof MotoristaViagensIndexRoute
   '/plataforma/transportadoras': typeof PlataformaTransportadorasIndexRoute
+  '/motorista/viagens/$id/detalhes': typeof MotoristaViagensIdDetalhesRoute
+  '/motorista/viagens/$id': typeof MotoristaViagensIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -245,11 +261,13 @@ export interface FileRoutesById {
   '/motorista/': typeof MotoristaIndexRoute
   '/plataforma/': typeof PlataformaIndexRoute
   '/viagens/': typeof ViagensIndexRoute
-  '/motorista/viagens/$id': typeof MotoristaViagensIdRoute
+  '/motorista/viagens/$id': typeof MotoristaViagensIdRouteWithChildren
   '/plataforma/transportadoras/$id': typeof PlataformaTransportadorasIdRoute
   '/plataforma/transportadoras/nova': typeof PlataformaTransportadorasNovaRoute
   '/motorista/viagens/': typeof MotoristaViagensIndexRoute
   '/plataforma/transportadoras/': typeof PlataformaTransportadorasIndexRoute
+  '/motorista/viagens/$id/detalhes': typeof MotoristaViagensIdDetalhesRoute
+  '/motorista/viagens/$id/': typeof MotoristaViagensIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -280,6 +298,8 @@ export interface FileRouteTypes {
     | '/plataforma/transportadoras/nova'
     | '/motorista/viagens/'
     | '/plataforma/transportadoras/'
+    | '/motorista/viagens/$id/detalhes'
+    | '/motorista/viagens/$id/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -298,11 +318,12 @@ export interface FileRouteTypes {
     | '/motorista'
     | '/plataforma'
     | '/viagens'
-    | '/motorista/viagens/$id'
     | '/plataforma/transportadoras/$id'
     | '/plataforma/transportadoras/nova'
     | '/motorista/viagens'
     | '/plataforma/transportadoras'
+    | '/motorista/viagens/$id/detalhes'
+    | '/motorista/viagens/$id'
   id:
     | '__root__'
     | '/'
@@ -331,6 +352,8 @@ export interface FileRouteTypes {
     | '/plataforma/transportadoras/nova'
     | '/motorista/viagens/'
     | '/plataforma/transportadoras/'
+    | '/motorista/viagens/$id/detalhes'
+    | '/motorista/viagens/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -533,16 +556,43 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MotoristaViagensIdRouteImport
       parentRoute: typeof MotoristaViagensRoute
     }
+    '/motorista/viagens/$id/': {
+      id: '/motorista/viagens/$id/'
+      path: '/'
+      fullPath: '/motorista/viagens/$id/'
+      preLoaderRoute: typeof MotoristaViagensIdIndexRouteImport
+      parentRoute: typeof MotoristaViagensIdRoute
+    }
+    '/motorista/viagens/$id/detalhes': {
+      id: '/motorista/viagens/$id/detalhes'
+      path: '/detalhes'
+      fullPath: '/motorista/viagens/$id/detalhes'
+      preLoaderRoute: typeof MotoristaViagensIdDetalhesRouteImport
+      parentRoute: typeof MotoristaViagensIdRoute
+    }
   }
 }
 
+interface MotoristaViagensIdRouteChildren {
+  MotoristaViagensIdDetalhesRoute: typeof MotoristaViagensIdDetalhesRoute
+  MotoristaViagensIdIndexRoute: typeof MotoristaViagensIdIndexRoute
+}
+
+const MotoristaViagensIdRouteChildren: MotoristaViagensIdRouteChildren = {
+  MotoristaViagensIdDetalhesRoute: MotoristaViagensIdDetalhesRoute,
+  MotoristaViagensIdIndexRoute: MotoristaViagensIdIndexRoute,
+}
+
+const MotoristaViagensIdRouteWithChildren =
+  MotoristaViagensIdRoute._addFileChildren(MotoristaViagensIdRouteChildren)
+
 interface MotoristaViagensRouteChildren {
-  MotoristaViagensIdRoute: typeof MotoristaViagensIdRoute
+  MotoristaViagensIdRoute: typeof MotoristaViagensIdRouteWithChildren
   MotoristaViagensIndexRoute: typeof MotoristaViagensIndexRoute
 }
 
 const MotoristaViagensRouteChildren: MotoristaViagensRouteChildren = {
-  MotoristaViagensIdRoute: MotoristaViagensIdRoute,
+  MotoristaViagensIdRoute: MotoristaViagensIdRouteWithChildren,
   MotoristaViagensIndexRoute: MotoristaViagensIndexRoute,
 }
 

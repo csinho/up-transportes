@@ -304,9 +304,108 @@ export type Database = {
         };
         Relationships: [];
       };
+      feedback_anexos: {
+        Row: {
+          id: string;
+          feedback_id: string;
+          storage_path: string;
+          nome_arquivo: string;
+          mime_type: string | null;
+          tamanho_bytes: number | null;
+          tipo: string;
+          duracao_segundos: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          feedback_id: string;
+          storage_path: string;
+          nome_arquivo: string;
+          mime_type?: string | null;
+          tamanho_bytes?: number | null;
+          tipo: string;
+          duracao_segundos?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          feedback_id?: string;
+          storage_path?: string;
+          nome_arquivo?: string;
+          mime_type?: string | null;
+          tamanho_bytes?: number | null;
+          tipo?: string;
+          duracao_segundos?: number | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      feedback_reports: {
+        Row: {
+          id: string;
+          transportadora_id: string;
+          user_id: string;
+          user_email: string | null;
+          user_nome: string | null;
+          titulo: string;
+          descricao: string;
+          impacto: string;
+          status: string;
+          pagina_url: string | null;
+          user_agent: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          transportadora_id: string;
+          user_id: string;
+          user_email?: string | null;
+          user_nome?: string | null;
+          titulo: string;
+          descricao: string;
+          impacto: string;
+          status?: string;
+          pagina_url?: string | null;
+          user_agent?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          transportadora_id?: string;
+          user_id?: string;
+          user_email?: string | null;
+          user_nome?: string | null;
+          titulo?: string;
+          descricao?: string;
+          impacto?: string;
+          status?: string;
+          pagina_url?: string | null;
+          user_agent?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
+      get_platform_feedback: { Args: { p_id: string }; Returns: Json };
+      list_platform_feedback: {
+        Args: { p_transportadora_id: string };
+        Returns: {
+          id: string;
+          titulo: string;
+          impacto: string;
+          status: string;
+          user_email: string | null;
+          user_nome: string | null;
+          total_anexos: number;
+          created_at: string;
+        }[];
+      };
+      update_platform_feedback_status: {
+        Args: { p_id: string; p_status: string };
+        Returns: undefined;
+      };
       link_my_motorista: {
         Args: { p_cpf: string };
         Returns: { motorista_id: string; transportadora_id: string; nome: string }[];

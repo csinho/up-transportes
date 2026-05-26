@@ -33,8 +33,17 @@ function divIcon(label: string, bg: string, size = 32) {
   });
 }
 
-const iconOrigem = divIcon("A", "#22C55E");
-const iconDestino = divIcon("B", "#EF4444");
+function circleIcon(bg: string, size = 32) {
+  return L.divIcon({
+    className: "leaflet-div-icon-custom",
+    html: `<div style="background:${bg};border-radius:50%;width:${size}px;height:${size}px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)"></div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  });
+}
+
+const iconOrigem = circleIcon("#22C55E");
+const iconDestino = circleIcon("#EF4444");
 const iconOcorrencia = divIcon("!", "#DC2626", 28);
 const iconDestaque = divIcon("•", "#2563EB", 36);
 
@@ -151,7 +160,7 @@ export function ViagemRastreamentoMapInner({
       <Marker position={origem} icon={iconOrigem}>
         <Popup>
           <div className="text-sm">
-            <p className="font-semibold">Origem (A)</p>
+            <p className="font-semibold">Origem</p>
             <p>{dados.clienteOrigem?.nome ?? dados.viagem.endereco_origem.cidade}</p>
             <p className="text-xs text-muted-foreground">{dados.viagem.endereco_origem.uf}</p>
           </div>
@@ -161,7 +170,7 @@ export function ViagemRastreamentoMapInner({
       <Marker position={destino} icon={iconDestino}>
         <Popup>
           <div className="text-sm">
-            <p className="font-semibold">Destino (B)</p>
+            <p className="font-semibold">Destino</p>
             <p>{dados.clienteDestino?.nome ?? dados.viagem.endereco_destino.cidade}</p>
             <p className="text-xs text-muted-foreground">{dados.viagem.endereco_destino.uf}</p>
           </div>

@@ -11,9 +11,11 @@ import {
   History,
   Map,
 } from "lucide-react";
+import { FeedbackSidebarButton } from "@/components/feedback/FeedbackSidebarButton";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -125,6 +127,9 @@ export function AppSidebar() {
         <NavGroup label="Cadastros" items={cadastros} path={path} />
         <NavGroup label="Configurações" items={configFiltrada} path={path} />
       </SidebarContent>
+      <SidebarFooter className="mt-auto border-t border-sidebar-border">
+        <FeedbackSidebarButton />
+      </SidebarFooter>
     </Sidebar>
   );
 }

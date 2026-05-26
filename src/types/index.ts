@@ -557,3 +557,64 @@ export interface LancamentoFinanceiro {
   created_at: ISODate;
   updated_at: ISODate;
 }
+
+// ── Feedback / reporte de bugs ───────────────────────────────────────────────
+
+export type FeedbackImpacto = "baixo" | "medio" | "alto" | "critico";
+
+export type FeedbackStatus = "aberto" | "em_analise" | "resolvido" | "fechado";
+
+export type FeedbackAnexoTipo = "arquivo" | "gravacao";
+
+export interface FeedbackAnexo {
+  id: UUID;
+  feedback_id?: UUID;
+  storage_path: string;
+  nome_arquivo: string;
+  mime_type?: string;
+  tamanho_bytes?: number;
+  tipo: FeedbackAnexoTipo;
+  duracao_segundos?: number;
+  created_at?: ISODate;
+}
+
+export interface FeedbackReport {
+  id: UUID;
+  transportadora_id: UUID;
+  user_id: UUID;
+  user_email?: string;
+  user_nome?: string;
+  titulo: string;
+  descricao: string;
+  impacto: FeedbackImpacto;
+  status: FeedbackStatus;
+  pagina_url?: string;
+  user_agent?: string;
+  created_at: ISODate;
+  anexos?: FeedbackAnexo[];
+}
+
+export type PlatformFeedbackResumo = {
+  id: string;
+  titulo: string;
+  impacto: FeedbackImpacto;
+  status: FeedbackStatus;
+  user_email: string | null;
+  user_nome: string | null;
+  total_anexos: number;
+  created_at: string;
+};
+
+export const FEEDBACK_IMPACTO_LABELS: Record<FeedbackImpacto, string> = {
+  baixo: "Baixo",
+  medio: "Médio",
+  alto: "Alto",
+  critico: "Crítico",
+};
+
+export const FEEDBACK_STATUS_LABELS: Record<FeedbackStatus, string> = {
+  aberto: "Aberto",
+  em_analise: "Em análise",
+  resolvido: "Resolvido",
+  fechado: "Fechado",
+};

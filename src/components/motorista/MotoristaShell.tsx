@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 type Props = {
   titulo?: string;
   voltarPara?: string;
+  voltarParams?: Record<string, string>;
   /** Tela de login — sem menu inferior */
   auth?: boolean;
   transportadoraId?: UUID;
@@ -29,6 +30,7 @@ type Props = {
 export function MotoristaShell({
   titulo = "Motorista",
   voltarPara,
+  voltarParams,
   auth,
   transportadoraId: transportadoraIdProp,
   children,
@@ -123,7 +125,7 @@ export function MotoristaShell({
       {voltarPara && (
         <div className="px-4 pt-3 max-w-lg mx-auto w-full">
           <Button variant="ghost" size="sm" asChild className="-ml-2">
-            <Link to={voltarPara} preload={false}>← Voltar</Link>
+            <Link to={voltarPara} params={voltarParams} preload={false}>← Voltar</Link>
           </Button>
         </div>
       )}

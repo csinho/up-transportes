@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { useClientes, useSaveCliente, useRemoveCliente, useActiveTenantId } from "@/data/store";
+import { useState, useMemo } from "react";
+import { useClientes, useSaveCliente, useRemoveCliente, useActiveTenantId, useViagens } from "@/data/store";
 import type { Cliente, TipoCliente } from "@/types";
 import { generateUuid } from "@/lib/uuid";
 import { Button } from "@/components/ui/button";
@@ -9,12 +9,23 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { AddressForm } from "@/components/AddressForm";
 import { maskCNPJ, maskCPF, maskPhone } from "@/lib/masks";
+import { enderecoMudou } from "@/lib/formatar-endereco";
+import { viagensAtivasDoCliente } from "@/lib/cliente-viagem-ativa";
 import { toast } from "sonner";
 import { useConfirm } from "@/hooks/use-confirm";
 import { useListControls } from "@/hooks/use-list-controls";
@@ -40,11 +51,15 @@ function empty(tenantId: string): Cliente {
 function Page() {
   const tenantId = useActiveTenantId();
   const { data: clientes = [] } = useClientes();
+  const { data: viagens = [] } = useViagens();
   const save = useSaveCliente();
   const remove = useRemoveCliente();
   const { confirm, ConfirmDialogHost } = useConfirm();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<Cliente | null>(null);
+  const [original, setOriginal] = useState<Cliente | null>(null);
+  const [bloqueioOpen, setBloqueioOpen] = useState(false);
+  const [viagensBloqueio, setViagensBloqueio] = useState<ReturnType<typeof viagensAtivasDoCliente>>([]);
 
   const list = useListControls({
     items: clientes,
@@ -53,9 +68,45 @@ function Page() {
     initialFilters: { tipo: FILTER_ALL },
   });
 
+  const viagensAtivasForm = useMemo(
+    () => (form ? viagensAtivasDoCliente(form.id, viagens) : []),
+    [form, viagens],
+  );
+
+  const abrirEdicao = (c: Cliente) => {
+    setForm(c);
+    setOriginal(c);
+    setOpen(true);
+  };
+
+  const abrirNovo = () => {
+    const novo = empty(tenantId);
+    setForm(novo);
+    setOriginal(null);
+    setOpen(true);
+  };
+
   const salvar = () => {
     if (!form) return;
     if (!form.nome) return toast.error("Nome é obrigatório");
+
+    const enderecoAlterado = original != null && enderecoMudou(original.endereco, form.endereco);
+    if (enderecoAlterado) {
+      const ativas = viagensAtivasDoCliente(form.id, viagens);
+      if (ativas.length > 0) {
+        setViagensBloqueio(ativas);
+        setBloqueioOpen(true);
+        save.mutate({
+          ...form,
+          endereco: original!.endereco,
+          updated_at: new Date().toISOString(),
+        });
+        toast.success("Dados salvos. O endereço não foi alterado — há viagem em andamento.");
+        setOpen(false);
+        return;
+      }
+    }
+
     save.mutate({ ...form, updated_at: new Date().toISOString() });
     toast.success("Cliente salvo");
     setOpen(false);
@@ -71,7 +122,7 @@ function Page() {
             Origem e destino das viagens · {clientes.length} cadastrados
           </p>
         </div>
-        <Button onClick={() => { setForm(empty(tenantId)); setOpen(true); }}><Plus className="h-4 w-4 mr-2" /> Novo cliente</Button>
+        <Button onClick={abrirNovo}><Plus className="h-4 w-4 mr-2" /> Novo cliente</Button>
       </div>
 
       <div className="rounded-lg border bg-card">
@@ -111,7 +162,7 @@ function Page() {
                 <TableCell>{c.endereco.cidade}/{c.endereco.uf}</TableCell>
                 <TableCell>{c.telefone_principal}</TableCell>
                 <TableCell><div className="flex gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => { setForm(c); setOpen(true); }}><Pencil className="h-3 w-3" /></Button>
+                  <Button size="sm" variant="ghost" onClick={() => abrirEdicao(c)}><Pencil className="h-3 w-3" /></Button>
                   <Button size="sm" variant="ghost" onClick={() => confirm({
                     title: "Remover cliente?",
                     description: `Deseja excluir ${c.nome}? Esta ação não pode ser desfeita.`,
@@ -161,8 +212,31 @@ function Page() {
                 <div><Label>Contato</Label><Input value={form.contato_responsavel ?? ""} onChange={(e) => setForm({ ...form, contato_responsavel: e.target.value })} /></div>
                 <div><Label>Cargo</Label><Input value={form.cargo_contato ?? ""} onChange={(e) => setForm({ ...form, cargo_contato: e.target.value })} /></div>
               </TabsContent>
-              <TabsContent value="endereco">
-                <AddressForm value={form.endereco} onChange={(e) => setForm({ ...form, endereco: e })} />
+              <TabsContent value="endereco" className="space-y-3">
+                {viagensAtivasForm.length > 0 && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 flex gap-2 text-sm">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-amber-900 dark:text-amber-100">
+                        Endereço bloqueado — viagem em andamento
+                      </p>
+                      <p className="text-amber-800/80 dark:text-amber-200/80 mt-1">
+                        Este cliente participa de {viagensAtivasForm.length} viagem(ns) ativa(s). O endereço só
+                        pode ser alterado após a conclusão.
+                      </p>
+                      <ul className="mt-2 space-y-0.5 text-xs text-amber-800 dark:text-amber-200">
+                        {viagensAtivasForm.map((v) => (
+                          <li key={v.id}>
+                            #{String(v.numero_viagem).padStart(5, "0")} — {v.statusLabel} ({v.papel === "origem" ? "origem" : "destino"})
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+                <fieldset disabled={viagensAtivasForm.length > 0} className="disabled:opacity-60">
+                  <AddressForm value={form.endereco} onChange={(e) => setForm({ ...form, endereco: e })} />
+                </fieldset>
               </TabsContent>
             </Tabs>
           )}
@@ -172,6 +246,33 @@ function Page() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={bloqueioOpen} onOpenChange={setBloqueioOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Não é possível alterar o endereço</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p>
+                  Este cliente está vinculado a viagem(ns) em andamento. O endereço registrado na viagem
+                  deve ser preservado até a conclusão.
+                </p>
+                <ul className="list-disc pl-5 space-y-1">
+                  {viagensBloqueio.map((v) => (
+                    <li key={v.id}>
+                      Viagem #{String(v.numero_viagem).padStart(5, "0")} — {v.statusLabel} (
+                      {v.papel === "origem" ? "origem" : "destino"})
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setBloqueioOpen(false)}>Entendi</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -60,8 +60,8 @@ function Page() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6">
+      <div className="flex justify-between items-center gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold">Configuração da Transportadora</h1>
           <p className="text-sm text-muted-foreground">
@@ -90,8 +90,8 @@ function Page() {
         <CardHeader>
           <CardTitle>Identificação</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-2">
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="sm:col-span-2">
             <Label>Nome fantasia</Label>
             <Input value={form.nome_fantasia} onChange={(e) => set("nome_fantasia", e.target.value)} />
           </div>
@@ -108,7 +108,11 @@ function Page() {
               </SelectContent>
             </Select>
           </div>
-          <div className="md:col-span-3">
+          <div>
+            <Label>RNTRC / ANTT</Label>
+            <Input value={form.rntrc ?? ""} onChange={(e) => set("rntrc", e.target.value)} />
+          </div>
+          <div className="sm:col-span-2 lg:col-span-4">
             <Label>Razão social</Label>
             <Input value={form.razao_social} onChange={(e) => set("razao_social", e.target.value)} />
           </div>
@@ -121,10 +125,6 @@ function Page() {
             <Input value={form.cpf ?? ""} onChange={(e) => set("cpf", maskCPF(e.target.value))} />
           </div>
           <div>
-            <Label>RNTRC / ANTT</Label>
-            <Input value={form.rntrc ?? ""} onChange={(e) => set("rntrc", e.target.value)} />
-          </div>
-          <div>
             <Label>Inscrição estadual</Label>
             <Input value={form.inscricao_estadual ?? ""} onChange={(e) => set("inscricao_estadual", e.target.value)} />
           </div>
@@ -132,7 +132,7 @@ function Page() {
             <Label>Inscrição municipal</Label>
             <Input value={form.inscricao_municipal ?? ""} onChange={(e) => set("inscricao_municipal", e.target.value)} />
           </div>
-          <div className="md:col-span-3">
+          <div className="sm:col-span-2 lg:col-span-4">
             <TransportadoraLogoUpload
               transportadoraId={tenantId}
               entidadeId={form.id}
@@ -147,7 +147,7 @@ function Page() {
         <CardHeader>
           <CardTitle>Contato</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <Label>Telefone principal</Label>
             <Input value={form.telefone_principal ?? ""} onChange={(e) => set("telefone_principal", maskPhone(e.target.value))} />

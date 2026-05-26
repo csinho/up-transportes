@@ -71,3 +71,28 @@ export async function uploadTransportadoraLogo(input: {
   if (error) lancarErroSupabase(error, "Falha ao enviar logo");
   return { path };
 }
+
+export const FEEDBACK_MAX_FILE_BYTES = 104_857_600; // 100 MB
+export const FEEDBACK_MAX_ANEXOS = 5;
+
+/** Upload de anexo de feedback (bucket privado `documentos`). */
+export async function uploadFeedbackAnexo(input: {
+  transportadoraId: string;
+  feedbackId: string;
+  file: File;
+}): Promise<{ path: string }> {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase não configurado");
+
+  const safeName = input.file.name.replace(/[^\w.-]+/g, "_");
+  const path = `${input.transportadoraId}/feedback/${input.feedbackId}/${Date.now()}-${safeName}`;
+
+  const { error } = await supabase.storage.from(BUCKET).upload(path, input.file, {
+    cacheControl: "3600",
+    upsert: false,
+    contentType: input.file.type || undefined,
+  });
+
+  if (error) lancarErroSupabase(error, "Falha ao enviar anexo");
+  return { path };
+}
