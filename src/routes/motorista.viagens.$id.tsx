@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { useMotoristaTenantId } from "@/hooks/use-motorista-tenant";
 import { hydrateMotoristaCacheBeforeLoad } from "@/lib/motorista-route-cache";
 import { isMotoristaOnline } from "@/lib/motorista-online";
 import { OFFLINE_MSG } from "@/lib/motorista-query-offline";
@@ -18,9 +17,8 @@ import { MotoristaOcorrenciasCard } from "@/components/motorista/MotoristaOcorre
 import { ViagemProgressoCard } from "@/components/viagem/ViagemProgressoCard";
 import { ViagemEventosTimeline } from "@/components/viagem/ViagemEventosTimeline";
 import { useMotoristaSession } from "@/hooks/use-motorista-session";
-import { useViagemGeolocalizacao } from "@/hooks/use-viagem-geolocalizacao";
 import { calcularProgressoViagem } from "@/lib/viagem-progresso";
-import { isViagemAtiva } from "@/lib/viagem-recursos";
+import { isStatusComRastreamentoGps } from "@/lib/viagem-geolocalizacao-constants";
 import { fmtMoeda } from "@/lib/motorista-app-path";
 import { ViagemStatusBadge } from "@/components/viagem/ViagemStatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,7 +36,6 @@ export const Route = createFileRoute("/motorista/viagens/$id")({
 function Page() {
   const { id } = Route.useParams();
   const { session } = useMotoristaSession();
-  const tenantId = useMotoristaTenantId();
   const { data: viagem, isFetched, isError, error } = useMotoristaViagem(id);
   const { data: localizacoes = [] } = useMotoristaViagemLocalizacoes(id);
   const { data: eventos = [] } = useMotoristaViagemEventos(id);
@@ -56,13 +53,6 @@ function Page() {
       return nextAt >= prevAt ? viagem : prev;
     });
   }, [viagem]);
-
-  useViagemGeolocalizacao({
-    viagem: form ?? undefined,
-    motoristaId: session?.motoristaId,
-    tenantId,
-    enabled: !!session && form?.motorista_id === session.motoristaId,
-  });
 
   if (!session) {
     return (
@@ -106,7 +96,7 @@ function Page() {
   const clienteOrigem = clientes.find((c) => c.id === form.cliente_origem_id);
   const clienteDestino = clientes.find((c) => c.id === form.cliente_destino_id);
   const progresso = calcularProgressoViagem(form, localizacoes);
-  const rastreando = isViagemAtiva(form.status);
+  const gpsAtivo = isStatusComRastreamentoGps(form.status);
 
   return (
     <MotoristaShell
@@ -116,13 +106,20 @@ function Page() {
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <ViagemStatusBadge status={form.status} />
-          {rastreando && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
+          {gpsAtivo && (
+            <span className="text-xs text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
               <Navigation className="h-3.5 w-3.5" />
-              GPS ativo em trânsito
+              GPS ativo
             </span>
           )}
         </div>
+
+        {gpsAtivo && (
+          <p className="text-xs text-muted-foreground -mt-2">
+            Mantenha o app aberto nesta viagem para registrar o trajeto a cada ~30 segundos. Com a
+            tela bloqueada ou em outro app, o navegador pode pausar o GPS.
+          </p>
+        )}
 
         <Card>
           <CardHeader className="pb-2">

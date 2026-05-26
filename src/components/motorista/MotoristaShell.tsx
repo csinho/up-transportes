@@ -10,6 +10,8 @@ import { TransportadoraLogo } from "@/components/transportadora/TransportadoraLo
 import { useMotoristaSession } from "@/hooks/use-motorista-session";
 import { useMotoristaOfflineSync } from "@/hooks/use-motorista-offline-sync";
 import { useMotoristaLiveSync } from "@/hooks/use-motorista-live-sync";
+import { useMotoristaGpsRastreamento } from "@/hooks/use-motorista-gps-rastreamento";
+import { useMotoristaWakeLock } from "@/hooks/use-motorista-wake-lock";
 import { useMotoristaQueueBootstrap } from "@/hooks/use-motorista-cache-bootstrap";
 import { registerMotoristaServiceWorker } from "@/lib/register-motorista-sw";
 import type { UUID } from "@/types";
@@ -35,6 +37,8 @@ export function MotoristaShell({
   const { online, pending } = useMotoristaOfflineSync();
   useMotoristaLiveSync();
   useMotoristaQueueBootstrap();
+  const { viagemRastreando } = useMotoristaGpsRastreamento();
+  useMotoristaWakeLock(viagemRastreando);
   const qc = useQueryClient();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });

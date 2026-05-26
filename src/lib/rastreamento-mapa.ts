@@ -38,10 +38,14 @@ export function montarDadosMapaViagem(
     viagem.endereco_destino.cidade,
   ).points;
 
-  const origem = rotaPlanejada[0] ?? latLngFromEndereco(viagem.endereco_origem);
-  const destino = rotaPlanejada[rotaPlanejada.length - 1] ?? latLngFromEndereco(viagem.endereco_destino);
+  const origem =
+    rota[0] ?? rotaPlanejada[0] ?? latLngFromEndereco(viagem.endereco_origem);
+  const destino =
+    rota[rota.length - 1] ??
+    rotaPlanejada[rotaPlanejada.length - 1] ??
+    latLngFromEndereco(viagem.endereco_destino);
 
-  const progresso = calcularProgressoViagem(viagem, locs);
+  const progresso = calcularProgressoViagem(viagem, localizacoes);
 
   return {
     viagem,

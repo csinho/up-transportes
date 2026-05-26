@@ -1,7 +1,13 @@
 import type { Viagem, ViagemLocalizacao } from "@/types";
 import type { LatLng } from "@/lib/geo-cidades";
 import { getRotaEntreCidades } from "@/data/rotas-mock";
-import { distanciaPolylineKm, progressoNaPolyline } from "@/lib/geo-utils";
+import { progressoNaPolyline } from "@/lib/geo-utils";
+import {
+  distanciaPercorridaGpsKm,
+  distanciaTotalEfetivaKm,
+  ordenarLocalizacoesViagem,
+  velocidadeMediaGps,
+} from "@/lib/viagem-gps-metrics";
 
 export type ProgressoViagem = {
   percentualConcluido: number;
@@ -46,13 +52,15 @@ export function calcularProgressoViagem(
   const origemCidade = viagem.endereco_origem.cidade;
   const destinoCidade = viagem.endereco_destino.cidade;
   const rota = getRotaEntreCidades(origemCidade, destinoCidade);
-  const distanciaTotalKm = rota.km || distanciaPolylineKm(rota.points);
+  const distanciaPlanejadaKm = rota.km || 0;
 
-  const locs = localizacoes
-    .filter((l) => l.viagem_id === viagem.id)
-    .sort((a, b) => new Date(a.registrado_em).getTime() - new Date(b.registrado_em).getTime());
+  const locs = ordenarLocalizacoesViagem(localizacoes, viagem.id);
+  const temHistoricoGps = locs.length >= 2;
+  const distanciaGpsKm = distanciaPercorridaGpsKm(locs);
+  const distanciaTotalKm = distanciaTotalEfetivaKm(distanciaPlanejadaKm, locs);
 
   const ultima = locs[locs.length - 1];
+  const primeira = locs[0];
   const posicaoAtual: LatLng | undefined = ultima ? [ultima.latitude, ultima.longitude] : undefined;
 
   const finalizada = viagem.status === "finalizada";
@@ -64,10 +72,22 @@ export function calcularProgressoViagem(
     viagem.status === "aguardando_carregamento" ||
     viagem.status === "em_carregamento";
 
+  const saidaPrevista = parseDate(viagem.data_prevista_saida);
+  const chegadaPrevista = parseDate(viagem.data_prevista_chegada);
+  const saidaReal = parseDate(viagem.data_real_saida);
+  const chegadaReal = parseDate(viagem.data_real_chegada);
+
+  const inicioGps = primeira ? parseDate(primeira.registrado_em) : null;
+  const fimGps = ultima ? parseDate(ultima.registrado_em) : null;
+  const inicioViagem = saidaReal ?? inicioGps ?? saidaPrevista;
+
   let percentualConcluido = 0;
   if (finalizada) {
     percentualConcluido = 100;
-  } else if (posicaoAtual) {
+  } else if (temHistoricoGps && distanciaTotalKm > 0) {
+    percentualConcluido =
+      Math.round((Math.min(distanciaGpsKm, distanciaTotalKm) / distanciaTotalKm) * 1000) / 10;
+  } else if (posicaoAtual && rota.points.length >= 2) {
     percentualConcluido = Math.round(progressoNaPolyline(rota.points, posicaoAtual) * 1000) / 10;
   } else if (viagem.status === "aguardando_carregamento" || viagem.status === "em_carregamento") {
     percentualConcluido = 2;
@@ -75,26 +95,31 @@ export function calcularProgressoViagem(
 
   percentualConcluido = Math.max(0, Math.min(100, percentualConcluido));
 
-  const distanciaPercorridaKm = Math.round(((distanciaTotalKm * percentualConcluido) / 100) * 10) / 10;
-  const distanciaRestanteKm = Math.round((distanciaTotalKm - distanciaPercorridaKm) * 10) / 10;
+  let distanciaPercorridaKm: number;
+  if (temHistoricoGps) {
+    distanciaPercorridaKm =
+      finalizada && distanciaTotalKm > 0
+        ? Math.min(distanciaTotalKm, distanciaGpsKm)
+        : distanciaGpsKm;
+  } else {
+    distanciaPercorridaKm = Math.round(((distanciaTotalKm * percentualConcluido) / 100) * 10) / 10;
+  }
 
-  const saidaPrevista = parseDate(viagem.data_prevista_saida);
-  const chegadaPrevista = parseDate(viagem.data_prevista_chegada);
-  const saidaReal = parseDate(viagem.data_real_saida);
-  const chegadaReal = parseDate(viagem.data_real_chegada);
+  const distanciaRestanteKm = Math.round(Math.max(0, distanciaTotalKm - distanciaPercorridaKm) * 10) / 10;
 
   const tempoTotalMinutos =
     saidaPrevista && chegadaPrevista
       ? Math.max(1, minutosEntre(saidaPrevista, chegadaPrevista))
       : rota.min;
 
-  const inicioViagem = saidaReal ?? saidaPrevista;
   const tempoDecorridoMinutos =
     finalizada && chegadaReal && inicioViagem
       ? minutosEntre(inicioViagem, chegadaReal)
-      : inicioViagem && emAndamento
-        ? Math.max(0, minutosEntre(inicioViagem, agora))
-        : 0;
+      : finalizada && fimGps && inicioViagem
+        ? minutosEntre(inicioViagem, fimGps)
+        : inicioViagem && emAndamento
+          ? Math.max(0, minutosEntre(inicioViagem, agora))
+          : 0;
 
   let tempoRestanteMinutos = 0;
   if (finalizada) {
@@ -102,7 +127,9 @@ export function calcularProgressoViagem(
   } else if (percentualConcluido >= 99) {
     tempoRestanteMinutos = viagem.status === "em_descarga" ? 0 : 5;
   } else if (percentualConcluido > 5 && tempoDecorridoMinutos > 0) {
-    tempoRestanteMinutos = Math.round((tempoDecorridoMinutos * (100 - percentualConcluido)) / percentualConcluido);
+    tempoRestanteMinutos = Math.round(
+      (tempoDecorridoMinutos * (100 - percentualConcluido)) / percentualConcluido,
+    );
   } else if (chegadaPrevista) {
     tempoRestanteMinutos = Math.max(0, minutosEntre(agora, chegadaPrevista));
   } else {
@@ -125,10 +152,23 @@ export function calcularProgressoViagem(
     atrasoMinutos = minutosEntre(chegadaPrevista, chegadaReal);
   }
 
-  const velocidadeMediaKmh =
-    tempoDecorridoMinutos > 0 && distanciaPercorridaKm > 0
-      ? Math.round((distanciaPercorridaKm / (tempoDecorridoMinutos / 60)) * 10) / 10
-      : (ultima?.velocidade_kmh ?? null);
+  let velocidadeMediaKmh: number | null = null;
+  if (temHistoricoGps) {
+    velocidadeMediaKmh = velocidadeMediaGps(locs);
+    if (
+      velocidadeMediaKmh == null &&
+      tempoDecorridoMinutos > 0 &&
+      distanciaPercorridaKm > 0
+    ) {
+      velocidadeMediaKmh =
+        Math.round((distanciaPercorridaKm / (tempoDecorridoMinutos / 60)) * 10) / 10;
+    }
+  } else if (tempoDecorridoMinutos > 0 && distanciaPercorridaKm > 0) {
+    velocidadeMediaKmh =
+      Math.round((distanciaPercorridaKm / (tempoDecorridoMinutos / 60)) * 10) / 10;
+  } else {
+    velocidadeMediaKmh = ultima?.velocidade_kmh ?? null;
+  }
 
   return {
     percentualConcluido,
