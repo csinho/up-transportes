@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, AlertTriangle } from "lucide-react";
+import { Plus, AlertTriangle, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { generateUuid } from "@/lib/uuid";
 import { useListControls } from "@/hooks/use-list-controls";
@@ -19,6 +19,7 @@ import { ListToolbar } from "@/components/list/ListToolbar";
 import { ListFilterSelect } from "@/components/list/ListFilterSelect";
 import { ListPagination } from "@/components/list/ListPagination";
 import { FILTER_ALL, matchesAny } from "@/lib/list-utils";
+import { cn } from "@/lib/utils";
 
 const GRAVIDADE_VARIANT: Record<GravidadeOcorrencia, "secondary" | "default" | "destructive" | "outline"> = {
   baixa: "secondary",
@@ -27,7 +28,15 @@ const GRAVIDADE_VARIANT: Record<GravidadeOcorrencia, "secondary" | "default" | "
   critica: "destructive",
 };
 
-export function ViagemOcorrenciasPanel({ viagemId, ocorrencias }: { viagemId: string; ocorrencias: ViagemOcorrencia[] }) {
+export function ViagemOcorrenciasPanel({
+  viagemId,
+  ocorrencias,
+  onVerNoMapa,
+}: {
+  viagemId: string;
+  ocorrencias: ViagemOcorrencia[];
+  onVerNoMapa?: (oc: ViagemOcorrencia) => void;
+}) {
   const tenantId = useActiveTenantId();
   const saveOcorrencia = useSaveViagemOcorrencia();
   const saveEvento = useSaveViagemEvento();
@@ -107,8 +116,25 @@ export function ViagemOcorrenciasPanel({ viagemId, ocorrencias }: { viagemId: st
             <ListFilterSelect label="Status" value={list.filters.status ?? FILTER_ALL} onChange={(v) => list.setFilter("status", v)} options={STATUS_OCORRENCIA.map((s) => ({ value: s.value, label: s.label }))} />
           </ListToolbar>
           <div className="space-y-3">
-          {list.paginated.map((oc) => (
-            <div key={oc.id} className="rounded-lg border p-4 space-y-2">
+          {list.paginated.map((oc) => {
+            const temLocal = oc.latitude != null && oc.longitude != null;
+            return (
+            <div
+              key={oc.id}
+              className={cn(
+                "rounded-lg border p-4 space-y-2",
+                temLocal && onVerNoMapa && "cursor-pointer hover:bg-muted/40 transition-colors",
+              )}
+              onClick={() => temLocal && onVerNoMapa?.(oc)}
+              onKeyDown={(e) => {
+                if (temLocal && onVerNoMapa && (e.key === "Enter" || e.key === " ")) {
+                  e.preventDefault();
+                  onVerNoMapa(oc);
+                }
+              }}
+              role={temLocal && onVerNoMapa ? "button" : undefined}
+              tabIndex={temLocal && onVerNoMapa ? 0 : undefined}
+            >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
@@ -121,14 +147,19 @@ export function ViagemOcorrenciasPanel({ viagemId, ocorrencias }: { viagemId: st
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">{oc.descricao}</p>
-              {oc.latitude != null && oc.longitude != null && (
-                <p className="text-xs text-muted-foreground font-mono">{oc.latitude.toFixed(5)}, {oc.longitude.toFixed(5)}</p>
+              {temLocal && (
+                <p className="text-xs text-primary flex items-center gap-1 font-medium">
+                  <MapPin className="h-3 w-3" />
+                  {oc.latitude!.toFixed(5)}, {oc.longitude!.toFixed(5)}
+                  {onVerNoMapa && " · Ver no mapa"}
+                </p>
               )}
               <p className="text-xs text-muted-foreground">
                 {format(new Date(oc.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
               </p>
             </div>
-          ))}
+            );
+          })}
           </div>
           <ListPagination page={list.page} totalPages={list.totalPages} totalItems={list.totalItems} onPageChange={list.setPage} />
         </div>

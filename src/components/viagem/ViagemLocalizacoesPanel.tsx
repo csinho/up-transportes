@@ -8,8 +8,16 @@ import { useListControls } from "@/hooks/use-list-controls";
 import { ListToolbar } from "@/components/list/ListToolbar";
 import { ListPagination } from "@/components/list/ListPagination";
 import { matchesAny } from "@/lib/list-utils";
+import { formatPrecisaoMetros, formatVelocidadeKmh } from "@/lib/viagem-gps-metrics";
+import { cn } from "@/lib/utils";
 
-export function ViagemLocalizacoesPanel({ localizacoes }: { localizacoes: ViagemLocalizacao[] }) {
+type Props = {
+  localizacoes: ViagemLocalizacao[];
+  onSelectPoint?: (loc: ViagemLocalizacao) => void;
+  selectedPointId?: string;
+};
+
+export function ViagemLocalizacoesPanel({ localizacoes, onSelectPoint, selectedPointId }: Props) {
   const list = useListControls({
     items: localizacoes,
     searchFn: (loc, q) =>
@@ -43,7 +51,7 @@ export function ViagemLocalizacoesPanel({ localizacoes }: { localizacoes: Viagem
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               {format(new Date(ultima.registrado_em), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-              {ultima.velocidade_kmh != null && ` · ${ultima.velocidade_kmh} km/h`}
+              {ultima.velocidade_kmh != null && ` · ${formatVelocidadeKmh(ultima.velocidade_kmh)}`}
             </p>
           </div>
           <Badge variant="secondary">{localizacoes.length} pontos no histórico</Badge>
@@ -78,7 +86,14 @@ export function ViagemLocalizacoesPanel({ localizacoes }: { localizacoes: Viagem
               </TableRow>
             )}
             {list.paginated.map((loc) => (
-              <TableRow key={loc.id}>
+              <TableRow
+                key={loc.id}
+                className={cn(
+                  onSelectPoint && "cursor-pointer hover:bg-muted/50",
+                  selectedPointId === loc.id && "bg-primary/5",
+                )}
+                onClick={() => onSelectPoint?.(loc)}
+              >
                 <TableCell className="text-sm">
                   {format(new Date(loc.registrado_em), "dd/MM/yyyy HH:mm:ss", { locale: ptBR })}
                 </TableCell>
@@ -88,13 +103,17 @@ export function ViagemLocalizacoesPanel({ localizacoes }: { localizacoes: Viagem
                     {loc.latitude.toFixed(5)}, {loc.longitude.toFixed(5)}
                   </span>
                 </TableCell>
-                <TableCell>{loc.velocidade_kmh != null ? `${loc.velocidade_kmh} km/h` : "—"}</TableCell>
-                <TableCell>{loc.precisao_metros != null ? `${loc.precisao_metros} m` : "—"}</TableCell>
+                <TableCell>{formatVelocidadeKmh(loc.velocidade_kmh)}</TableCell>
+                <TableCell>{formatPrecisaoMetros(loc.precisao_metros)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+
+      {onSelectPoint && (
+        <p className="text-xs text-muted-foreground">Clique em uma linha para localizar o ponto no mapa.</p>
+      )}
 
       <ListPagination page={list.page} totalPages={list.totalPages} totalItems={list.totalItems} onPageChange={list.setPage} />
     </div>

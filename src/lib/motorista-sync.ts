@@ -192,7 +192,12 @@ export async function motoristaSyncLocalizacao(
   return persistOrQueue({ id: loc.id, type: "viagem_localizacao", record: loc }, qc);
 }
 
-const STATUS_COM_OCORRENCIA: StatusViagem[] = ["em_transito", "parada", "em_descarga"];
+const STATUS_COM_OCORRENCIA: StatusViagem[] = [
+  "em_transito",
+  "parada",
+  "aguardando_descarga",
+  "em_descarga",
+];
 
 export function viagemStatusAposOcorrencia(status: StatusViagem): StatusViagem {
   return STATUS_COM_OCORRENCIA.includes(status) ? "com_ocorrencia" : status;

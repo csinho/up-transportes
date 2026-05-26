@@ -2,6 +2,16 @@ import type { ViagemLocalizacao } from "@/types";
 import type { LatLng } from "@/lib/geo-cidades";
 import { distanciaHaversineKm, distanciaPolylineKm } from "@/lib/geo-utils";
 
+export function formatVelocidadeKmh(kmh: number | null | undefined): string {
+  if (kmh == null || Number.isNaN(kmh)) return "—";
+  return `${kmh.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km/h`;
+}
+
+export function formatPrecisaoMetros(m: number | null | undefined): string {
+  if (m == null || Number.isNaN(m)) return "—";
+  return `${Math.round(m).toLocaleString("pt-BR")} m`;
+}
+
 export function ordenarLocalizacoesViagem(
   localizacoes: ViagemLocalizacao[],
   viagemId: string,

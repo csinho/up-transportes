@@ -1,4 +1,4 @@
-import type { StatusViagem, TipoViagemEvento, Viagem } from "@/types";
+import type { StatusViagem, TipoViagemEvento, Viagem, ViagemEvento } from "@/types";
 
 export type AcaoMotoristaViagem = {
   id: string;
@@ -13,7 +13,20 @@ export type AcaoMotoristaViagem = {
   definirDataRealChegada?: boolean;
 };
 
-export function getAcoesMotorista(viagem: Viagem): AcaoMotoristaViagem[] {
+export function viagemTemEvento(eventos: ViagemEvento[], tipo: TipoViagemEvento): boolean {
+  return eventos.some((e) => e.tipo === tipo);
+}
+
+/** Status correto ao retomar após parada ou ocorrência. */
+export function inferirStatusRetomar(viagem: Viagem, eventos: ViagemEvento[]): StatusViagem {
+  if (!viagem.data_real_chegada) return "em_transito";
+  if (viagemTemEvento(eventos, "descarga_inicio")) return "em_descarga";
+  return "aguardando_descarga";
+}
+
+export function getAcoesMotorista(viagem: Viagem, eventos: ViagemEvento[] = []): AcaoMotoristaViagem[] {
+  const descargaConcluida = viagemTemEvento(eventos, "descarga_fim");
+
   switch (viagem.status) {
     case "planejada":
     case "aguardando_carregamento":
@@ -48,7 +61,7 @@ export function getAcoesMotorista(viagem: Viagem): AcaoMotoristaViagem[] {
           id: "chegada_destino",
           label: "Cheguei no destino",
           variant: "default",
-          novoStatus: "em_descarga",
+          novoStatus: "aguardando_descarga",
           tipoEvento: "chegada_destino",
           tituloEvento: "Chegada ao destino",
           descricaoEvento: "Motorista chegou ao ponto de descarga.",
@@ -64,6 +77,19 @@ export function getAcoesMotorista(viagem: Viagem): AcaoMotoristaViagem[] {
           descricaoEvento: "Viagem pausada pelo motorista.",
         },
       ];
+    case "aguardando_descarga":
+      return [
+        {
+          id: "descarga_inicio",
+          label: "Iniciar descarga",
+          descricao: "Confirme quando começar a descarregar",
+          variant: "default",
+          novoStatus: "em_descarga",
+          tipoEvento: "descarga_inicio",
+          tituloEvento: "Descarga iniciada",
+          descricaoEvento: "Motorista iniciou a descarga no destino.",
+        },
+      ];
     case "parada":
     case "com_ocorrencia":
       return [
@@ -71,13 +97,14 @@ export function getAcoesMotorista(viagem: Viagem): AcaoMotoristaViagem[] {
           id: "retomar",
           label: "Retomar viagem",
           variant: "default",
-          novoStatus: "em_transito",
+          novoStatus: inferirStatusRetomar(viagem, eventos),
           tipoEvento: "retomada",
           tituloEvento: "Viagem retomada",
           descricaoEvento: "Motorista retomou o trânsito.",
         },
       ];
     case "em_descarga":
+      if (descargaConcluida) return [];
       return [
         {
           id: "descarga_fim",
@@ -95,6 +122,6 @@ export function getAcoesMotorista(viagem: Viagem): AcaoMotoristaViagem[] {
   }
 }
 
-export function motoristaPodeFinalizar(status: StatusViagem): boolean {
-  return ["em_transito", "parada", "em_descarga", "com_ocorrencia", "em_carregamento"].includes(status);
+export function motoristaPodeFinalizar(viagem: Viagem, eventos: ViagemEvento[] = []): boolean {
+  return viagem.status === "em_descarga" && viagemTemEvento(eventos, "descarga_fim");
 }

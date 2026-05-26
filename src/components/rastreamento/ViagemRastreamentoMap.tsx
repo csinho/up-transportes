@@ -1,15 +1,22 @@
 import { useEffect, useState } from "react";
 import type { DadosMapaViagem } from "@/lib/rastreamento-mapa";
+import type {
+  MapaPontoDestaque,
+  OcorrenciaMapa,
+  ViagemRastreamentoMapInnerProps,
+} from "@/components/rastreamento/ViagemRastreamentoMapInner";
 import { Loader2 } from "lucide-react";
 
 type Props = {
   dados: DadosMapaViagem | null;
   className?: string;
+  focusedPoint?: MapaPontoDestaque | null;
+  ocorrencias?: OcorrenciaMapa[];
 };
 
-export function ViagemRastreamentoMap({ dados, className }: Props) {
+export function ViagemRastreamentoMap({ dados, className, focusedPoint, ocorrencias }: Props) {
   const [MapInner, setMapInner] = useState<
-    React.ComponentType<{ dados: DadosMapaViagem | null; className?: string }> | null
+    React.ComponentType<ViagemRastreamentoMapInnerProps> | null
   >(null);
 
   useEffect(() => {
@@ -28,5 +35,14 @@ export function ViagemRastreamentoMap({ dados, className }: Props) {
     );
   }
 
-  return <MapInner dados={dados} className={className} />;
+  return (
+    <MapInner
+      dados={dados}
+      className={className}
+      focusedPoint={focusedPoint}
+      ocorrencias={ocorrencias}
+    />
+  );
 }
+
+export type { MapaPontoDestaque, OcorrenciaMapa };

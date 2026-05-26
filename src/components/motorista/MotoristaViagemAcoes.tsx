@@ -1,22 +1,27 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import type { Viagem } from "@/types";
+import type { DocumentoAnexo, Viagem, ViagemEvento } from "@/types";
 import { requestMotoristaLocationOnce } from "@/lib/motorista-geolocation";
+import { isMotoristaOnline } from "@/lib/motorista-online";
 import { motoristaSyncLocalizacao } from "@/lib/motorista-sync";
 import {
   getAcoesMotorista,
+  inferirStatusRetomar,
   motoristaPodeFinalizar,
   type AcaoMotoristaViagem,
 } from "@/lib/motorista-viagem-actions";
 import { isViagemAtiva } from "@/lib/viagem-recursos";
+import { uploadDocumento } from "@/lib/supabase/storage";
+import { traduzirErroSupabase } from "@/lib/supabase/traduzir-erro";
 import { toast } from "sonner";
-import { MotoristaFinalizarSheet } from "./MotoristaFinalizarSheet";
+import { MotoristaFinalizarSheet, type FinalizarViagemPayload } from "./MotoristaFinalizarSheet";
 import { useMotoristaSync } from "@/hooks/use-motorista-sync";
 import { generateUuid } from "@/lib/uuid";
 
 type Props = {
   viagem: Viagem;
+  eventos: ViagemEvento[];
   motoristaId: string;
   motoristaNome: string;
   onUpdated?: (viagem: Viagem) => void;
@@ -30,7 +35,13 @@ function toastSync(result: "synced" | "queued", ok: string) {
   }
 }
 
-export function MotoristaViagemAcoes({ viagem, motoristaId, motoristaNome, onUpdated }: Props) {
+export function MotoristaViagemAcoes({
+  viagem,
+  eventos,
+  motoristaId,
+  motoristaNome,
+  onUpdated,
+}: Props) {
   const qc = useQueryClient();
   const { syncViagemComEvento } = useMotoristaSync();
   const [finalizarOpen, setFinalizarOpen] = useState(false);
@@ -67,25 +78,32 @@ export function MotoristaViagemAcoes({ viagem, motoristaId, motoristaNome, onUpd
     );
   }
 
-  const acoes = getAcoesMotorista(viagem);
-  const podeFinalizar = motoristaPodeFinalizar(viagem.status);
+  const acoes = getAcoesMotorista(viagem, eventos);
+  const podeFinalizar = motoristaPodeFinalizar(viagem, eventos);
 
   const executarAcao = (acao: AcaoMotoristaViagem) => {
     void (async () => {
       setLoadingId(acao.id);
       const now = new Date().toISOString();
       const statusAnterior = viagem.status;
+      const novoStatus =
+        acao.id === "retomar" ? inferirStatusRetomar(viagem, eventos) : acao.novoStatus;
 
       const atualizada: Viagem = {
         ...viagem,
-        status: acao.novoStatus,
+        status: novoStatus,
         updated_at: now,
         ...(acao.definirDataRealSaida && !viagem.data_real_saida ? { data_real_saida: now } : {}),
         ...(acao.definirDataRealChegada && !viagem.data_real_chegada ? { data_real_chegada: now } : {}),
       };
 
       try {
-        if (acao.id === "iniciar_carregamento" || acao.id === "sair_origem") {
+        if (
+          acao.id === "iniciar_carregamento" ||
+          acao.id === "sair_origem" ||
+          acao.id === "chegada_destino" ||
+          acao.id === "descarga_inicio"
+        ) {
           await registrarGpsSeDisponivel();
         }
 
@@ -97,7 +115,7 @@ export function MotoristaViagemAcoes({ viagem, motoristaId, motoristaNome, onUpd
           titulo: acao.tituloEvento,
           descricao: acao.descricaoEvento,
           status_anterior: statusAnterior,
-          status_novo: acao.novoStatus,
+          status_novo: novoStatus,
           origem: "motorista",
           motorista_id: motoristaId,
           created_at: now,
@@ -114,24 +132,50 @@ export function MotoristaViagemAcoes({ viagem, motoristaId, motoristaNome, onUpd
     })();
   };
 
-  const finalizar = (observacao?: string) => {
+  const finalizar = ({ observacao, fotos }: FinalizarViagemPayload) => {
     void (async () => {
+      if (fotos.length > 0 && !isMotoristaOnline()) {
+        toast.error("Conecte-se à internet para enviar fotos da entrega.");
+        return;
+      }
+
       setLoadingId("finalizar");
       const now = new Date().toISOString();
       const statusAnterior = viagem.status;
 
-      const atualizada: Viagem = {
-        ...viagem,
-        status: "finalizada",
-        data_real_chegada: viagem.data_real_chegada ?? now,
-        finalizacao_origem: "motorista",
-        finalizacao_em: now,
-        finalizacao_por_nome: motoristaNome,
-        finalizacao_motivo: observacao,
-        updated_at: now,
-      };
-
       try {
+        let documentos: DocumentoAnexo[] = [...(viagem.documentos ?? [])];
+
+        for (const file of fotos) {
+          const { path } = await uploadDocumento({
+            transportadoraId: viagem.transportadora_id,
+            entidade: "viagens",
+            entidadeId: viagem.id,
+            file,
+          });
+          documentos.push({
+            id: generateUuid(),
+            tipo_documento: "Canhoto",
+            nome_arquivo: file.name,
+            arquivo_url: "",
+            storage_path: path,
+            mime_type: file.type || "image/jpeg",
+            data_upload: now,
+          });
+        }
+
+        const atualizada: Viagem = {
+          ...viagem,
+          status: "finalizada",
+          documentos,
+          data_real_chegada: viagem.data_real_chegada ?? now,
+          finalizacao_origem: "motorista",
+          finalizacao_em: now,
+          finalizacao_por_nome: motoristaNome,
+          finalizacao_motivo: observacao,
+          updated_at: now,
+        };
+
         const result = await syncViagemComEvento(atualizada, {
           id: generateUuid(),
           transportadora_id: viagem.transportadora_id,
@@ -152,7 +196,8 @@ export function MotoristaViagemAcoes({ viagem, motoristaId, motoristaNome, onUpd
         setFinalizarOpen(false);
         toastSync(result, "Viagem finalizada!");
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "Não foi possível finalizar. Tente novamente.";
+        const msg =
+          err instanceof Error ? traduzirErroSupabase(err) : "Não foi possível finalizar. Tente novamente.";
         toast.error(msg);
       } finally {
         setLoadingId(null);
@@ -195,7 +240,7 @@ export function MotoristaViagemAcoes({ viagem, motoristaId, motoristaNome, onUpd
         onOpenChange={setFinalizarOpen}
         numeroViagem={viagem.numero_viagem}
         onConfirm={finalizar}
-        loading={!!loadingId}
+        loading={loadingId === "finalizar"}
       />
     </div>
   );

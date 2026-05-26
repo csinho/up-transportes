@@ -160,6 +160,7 @@ function Page() {
               <CardContent>
                 <MotoristaViagemAcoes
                   viagem={form}
+                  eventos={eventos}
                   motoristaId={session.motoristaId}
                   motoristaNome={session.nome}
                   onUpdated={setForm}

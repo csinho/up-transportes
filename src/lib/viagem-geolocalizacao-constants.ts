@@ -7,6 +7,7 @@ export const STATUS_COM_RASTREAMENTO_GPS = new Set<Viagem["status"]>([
   "em_carregamento",
   "em_transito",
   "parada",
+  "aguardando_descarga",
   "em_descarga",
   "com_ocorrencia",
 ]);
@@ -14,6 +15,7 @@ export const STATUS_COM_RASTREAMENTO_GPS = new Set<Viagem["status"]>([
 const PRIORIDADE_STATUS: Partial<Record<Viagem["status"], number>> = {
   em_transito: 50,
   em_descarga: 40,
+  aguardando_descarga: 35,
   parada: 30,
   em_carregamento: 20,
   com_ocorrencia: 10,

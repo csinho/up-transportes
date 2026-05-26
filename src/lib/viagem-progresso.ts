@@ -125,7 +125,7 @@ export function calcularProgressoViagem(
   if (finalizada) {
     tempoRestanteMinutos = 0;
   } else if (percentualConcluido >= 99) {
-    tempoRestanteMinutos = viagem.status === "em_descarga" ? 0 : 5;
+    tempoRestanteMinutos = viagem.status === "em_descarga" || viagem.status === "aguardando_descarga" ? 0 : 5;
   } else if (percentualConcluido > 5 && tempoDecorridoMinutos > 0) {
     tempoRestanteMinutos = Math.round(
       (tempoDecorridoMinutos * (100 - percentualConcluido)) / percentualConcluido,

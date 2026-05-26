@@ -7,7 +7,22 @@ import type { DadosMapaViagem } from "@/lib/rastreamento-mapa";
 import type { LatLng } from "@/lib/geo-cidades";
 import { ViagemStatusBadge } from "@/components/viagem/ViagemStatusBadge";
 import { formatarDataHora, formatarDuracao } from "@/lib/viagem-progresso";
+import { formatVelocidadeKmh } from "@/lib/viagem-gps-metrics";
 import { Button } from "@/components/ui/button";
+
+export type MapaPontoDestaque = {
+  lat: number;
+  lng: number;
+  label?: string;
+  tipo?: "localizacao" | "ocorrencia";
+};
+
+export type OcorrenciaMapa = {
+  id: string;
+  lat: number;
+  lng: number;
+  titulo: string;
+};
 
 function divIcon(label: string, bg: string, size = 32) {
   return L.divIcon({
@@ -20,6 +35,8 @@ function divIcon(label: string, bg: string, size = 32) {
 
 const iconOrigem = divIcon("A", "#22C55E");
 const iconDestino = divIcon("B", "#EF4444");
+const iconOcorrencia = divIcon("!", "#DC2626", 28);
+const iconDestaque = divIcon("•", "#2563EB", 36);
 
 function truckIcon() {
   return L.divIcon({
@@ -43,6 +60,15 @@ function FitBounds({ points, tripId, revision }: { points: LatLng[]; tripId: str
   return null;
 }
 
+function MapFocusController({ point }: { point?: MapaPontoDestaque | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!point) return;
+    map.flyTo([point.lat, point.lng], 16, { duration: 0.75 });
+  }, [map, point?.lat, point?.lng, point?.label, point?.tipo]);
+  return null;
+}
+
 function PopupConteudo({ dados }: { dados: DadosMapaViagem }) {
   const v = dados.viagem;
   return (
@@ -56,7 +82,7 @@ function PopupConteudo({ dados }: { dados: DadosMapaViagem }) {
       <p className="text-xs"><strong>Motorista:</strong> {dados.motorista?.nome ?? "—"}</p>
       <p className="text-xs"><strong>Veículo:</strong> {dados.veiculo?.placa ?? "—"}</p>
       {dados.ultimaVelocidade != null && (
-        <p className="text-xs text-muted-foreground">{dados.ultimaVelocidade} km/h</p>
+        <p className="text-xs text-muted-foreground">{formatVelocidadeKmh(dados.ultimaVelocidade)}</p>
       )}
       {dados.progresso.emAndamento && (
         <p className="text-xs">
@@ -74,9 +100,16 @@ function PopupConteudo({ dados }: { dados: DadosMapaViagem }) {
 export type ViagemRastreamentoMapInnerProps = {
   dados: DadosMapaViagem | null;
   className?: string;
+  focusedPoint?: MapaPontoDestaque | null;
+  ocorrencias?: OcorrenciaMapa[];
 };
 
-export function ViagemRastreamentoMapInner({ dados, className }: ViagemRastreamentoMapInnerProps) {
+export function ViagemRastreamentoMapInner({
+  dados,
+  className,
+  focusedPoint,
+  ocorrencias = [],
+}: ViagemRastreamentoMapInnerProps) {
   if (!dados) {
     return (
       <div className={`flex items-center justify-center bg-muted/40 rounded-lg border ${className ?? "h-[480px]"}`}>
@@ -90,9 +123,13 @@ export function ViagemRastreamentoMapInner({ dados, className }: ViagemRastreame
   const linhaPlanejada = rotaPlanejada.length >= 2 ? rotaPlanejada : [origem, destino];
   const boundsPoints: LatLng[] = [origem, destino, ...linhaPlanejada, ...linhaPercorrida];
   if (posicaoAtual) boundsPoints.push(posicaoAtual);
-  const revision = `${rota.length}:${posicaoAtual?.join(",") ?? ""}`;
+  ocorrencias.forEach((oc) => boundsPoints.push([oc.lat, oc.lng]));
+  if (focusedPoint) boundsPoints.push([focusedPoint.lat, focusedPoint.lng]);
+  const revision = `${rota.length}:${posicaoAtual?.join(",") ?? ""}:${focusedPoint?.lat ?? ""}`;
 
-  const centro: LatLng = posicaoAtual ?? origem;
+  const centro: LatLng = focusedPoint
+    ? [focusedPoint.lat, focusedPoint.lng]
+    : posicaoAtual ?? origem;
 
   return (
     <MapContainer
@@ -106,7 +143,10 @@ export function ViagemRastreamentoMapInner({ dados, className }: ViagemRastreame
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <FitBounds points={boundsPoints} tripId={dados.viagem.id} revision={revision} />
+      {!focusedPoint && (
+        <FitBounds points={boundsPoints} tripId={dados.viagem.id} revision={revision} />
+      )}
+      <MapFocusController point={focusedPoint} />
 
       <Marker position={origem} icon={iconOrigem}>
         <Popup>
@@ -128,6 +168,17 @@ export function ViagemRastreamentoMapInner({ dados, className }: ViagemRastreame
         </Popup>
       </Marker>
 
+      {ocorrencias.map((oc) => (
+        <Marker key={oc.id} position={[oc.lat, oc.lng]} icon={iconOcorrencia}>
+          <Popup>
+            <div className="text-sm space-y-1">
+              <p className="font-semibold">Ocorrência</p>
+              <p>{oc.titulo}</p>
+            </div>
+          </Popup>
+        </Marker>
+      ))}
+
       <Polyline
         positions={linhaPlanejada}
         pathOptions={{ color: "#94a3b8", weight: 3, opacity: 0.7, dashArray: "8 8" }}
@@ -137,7 +188,23 @@ export function ViagemRastreamentoMapInner({ dados, className }: ViagemRastreame
         <Polyline positions={linhaPercorrida} pathOptions={{ color: "#2563eb", weight: 4, opacity: 0.9 }} />
       )}
 
-      {posicaoAtual && (
+      {focusedPoint && (
+        <Marker position={[focusedPoint.lat, focusedPoint.lng]} icon={iconDestaque}>
+          <Popup>
+            <div className="text-sm">
+              <p className="font-semibold">
+                {focusedPoint.tipo === "ocorrencia" ? "Ocorrência" : "Ponto GPS"}
+              </p>
+              {focusedPoint.label && <p>{focusedPoint.label}</p>}
+              <p className="text-xs font-mono text-muted-foreground mt-1">
+                {focusedPoint.lat.toFixed(5)}, {focusedPoint.lng.toFixed(5)}
+              </p>
+            </div>
+          </Popup>
+        </Marker>
+      )}
+
+      {posicaoAtual && !focusedPoint && (
         <Marker
           key={`${posicaoAtual[0]}-${posicaoAtual[1]}`}
           position={posicaoAtual}

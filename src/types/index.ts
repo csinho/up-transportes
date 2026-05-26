@@ -244,6 +244,7 @@ export type StatusViagem =
   | "em_carregamento"
   | "em_transito"
   | "parada"
+  | "aguardando_descarga"
   | "em_descarga"
   | "finalizada"
   | "cancelada"
@@ -255,6 +256,7 @@ export const STATUS_VIAGEM: { value: StatusViagem; label: string }[] = [
   { value: "em_carregamento", label: "Em carregamento" },
   { value: "em_transito", label: "Em trânsito" },
   { value: "parada", label: "Parada" },
+  { value: "aguardando_descarga", label: "Aguardando descarga" },
   { value: "em_descarga", label: "Em descarga" },
   { value: "finalizada", label: "Finalizada" },
   { value: "cancelada", label: "Cancelada" },

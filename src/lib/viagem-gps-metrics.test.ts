@@ -3,6 +3,8 @@ import type { ViagemLocalizacao } from "@/types";
 import {
   distanciaPercorridaGpsKm,
   distanciaTotalEfetivaKm,
+  formatPrecisaoMetros,
+  formatVelocidadeKmh,
   velocidadeMediaGps,
 } from "@/lib/viagem-gps-metrics";
 import { calcularProgressoViagem } from "@/lib/viagem-progresso";
@@ -29,6 +31,16 @@ function loc(
 }
 
 describe("viagem-gps-metrics", () => {
+  it("formata velocidade com 1 casa decimal", () => {
+    expect(formatVelocidadeKmh(10.8359999656677)).toBe("10,8 km/h");
+    expect(formatVelocidadeKmh(null)).toBe("—");
+  });
+
+  it("formata precisão como metros inteiros", () => {
+    expect(formatPrecisaoMetros(3.78999996185303)).toBe("4 m");
+    expect(formatPrecisaoMetros(undefined)).toBe("—");
+  });
+
   it("soma distância entre pontos consecutivos", () => {
     const locs = [
       loc(0, -12.97, -38.51, "2026-05-25T17:00:00.000Z"),

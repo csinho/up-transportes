@@ -11,6 +11,7 @@ const STATUS_ATIVOS = new Set([
   "em_carregamento",
   "em_transito",
   "parada",
+  "aguardando_descarga",
   "em_descarga",
   "com_ocorrencia",
   "planejada",

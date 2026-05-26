@@ -53,6 +53,14 @@ export const VIAGEM_STATUS_STYLES: Record<StatusViagem, ViagemStatusStyle> = {
     accentLeft: "border-l-4 border-l-red-400",
     accent: "border-l-4 border-l-red-400",
   },
+  aguardando_descarga: {
+    label: "Aguardando descarga",
+    badge: "border-cyan-600 bg-cyan-50 text-cyan-900",
+    card: CARD_NEUTRAL,
+    accentRight: "border-r-4 border-r-cyan-600",
+    accentLeft: "border-l-4 border-l-cyan-600",
+    accent: "border-l-4 border-l-cyan-600",
+  },
   em_descarga: {
     label: "Em descarga",
     badge: "border-teal-600 bg-teal-50 text-teal-900",

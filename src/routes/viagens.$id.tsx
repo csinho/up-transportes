@@ -32,7 +32,7 @@ import { toast } from "sonner";
 import { ViagemEventosTimeline } from "@/components/viagem/ViagemEventosTimeline";
 import { ViagemOcorrenciasPanel } from "@/components/viagem/ViagemOcorrenciasPanel";
 import { ViagemLocalizacoesPanel } from "@/components/viagem/ViagemLocalizacoesPanel";
-import { ViagemRastreamentoMap } from "@/components/rastreamento/ViagemRastreamentoMap";
+import { ViagemRastreamentoMap, type MapaPontoDestaque } from "@/components/rastreamento/ViagemRastreamentoMap";
 import { ViagemProgressoCard } from "@/components/viagem/ViagemProgressoCard";
 import { ViagemAcessoClientePanel } from "@/components/viagem/ViagemAcessoClientePanel";
 import { montarDadosMapaViagem } from "@/lib/rastreamento-mapa";
@@ -66,7 +66,52 @@ function Page() {
 
   const [form, setForm] = useState<Viagem | null>(null);
   const [finalizarOpen, setFinalizarOpen] = useState(false);
+  const [tab, setTab] = useState("resumo");
+  const [mapFocus, setMapFocus] = useState<MapaPontoDestaque | null>(null);
+  const [selectedLocId, setSelectedLocId] = useState<string | undefined>();
   useEffect(() => { if (viagem) setForm(viagem); }, [viagem]);
+
+  useEffect(() => {
+    if (tab !== "localizacao" || !mapFocus) return;
+    requestAnimationFrame(() => {
+      document.getElementById("viagem-mapa-container")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [tab, mapFocus]);
+
+  const ocorrenciasMapa = useMemo(
+    () =>
+      ocorrencias
+        .filter((oc) => oc.latitude != null && oc.longitude != null)
+        .map((oc) => ({
+          id: oc.id,
+          lat: oc.latitude!,
+          lng: oc.longitude!,
+          titulo: oc.titulo,
+        })),
+    [ocorrencias],
+  );
+
+  const focarOcorrenciaNoMapa = (oc: (typeof ocorrencias)[number]) => {
+    if (oc.latitude == null || oc.longitude == null) return;
+    setTab("localizacao");
+    setSelectedLocId(undefined);
+    setMapFocus({
+      lat: oc.latitude,
+      lng: oc.longitude,
+      label: oc.titulo,
+      tipo: "ocorrencia",
+    });
+  };
+
+  const focarLocalizacaoNoMapa = (loc: (typeof localizacoes)[number]) => {
+    setSelectedLocId(loc.id);
+    setMapFocus({
+      lat: loc.latitude,
+      lng: loc.longitude,
+      label: format(new Date(loc.registrado_em), "dd/MM/yyyy HH:mm:ss", { locale: ptBR }),
+      tipo: "localizacao",
+    });
+  };
 
   const dadosMapa = useMemo(() => {
     if (!form) return null;
@@ -171,7 +216,7 @@ function Page() {
         loading={save.isPending}
       />
 
-      <Tabs defaultValue="resumo">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="resumo">Resumo</TabsTrigger>
           <TabsTrigger value="eventos">Eventos ({eventos.length})</TabsTrigger>
@@ -259,19 +304,28 @@ function Page() {
               <CardTitle className="text-base">Ocorrências da viagem</CardTitle>
             </CardHeader>
             <CardContent>
-              <ViagemOcorrenciasPanel viagemId={id} ocorrencias={ocorrencias} />
+              <ViagemOcorrenciasPanel
+                viagemId={id}
+                ocorrencias={ocorrencias}
+                onVerNoMapa={focarOcorrenciaNoMapa}
+              />
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="localizacao" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+          <div id="viagem-mapa-container" className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
             <Card className="overflow-hidden">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Mapa da viagem</CardTitle>
               </CardHeader>
               <CardContent>
-                <ViagemRastreamentoMap dados={dadosMapa} className="h-[420px] min-h-[320px]" />
+                <ViagemRastreamentoMap
+                  dados={dadosMapa}
+                  className="h-[420px] min-h-[320px]"
+                  focusedPoint={mapFocus}
+                  ocorrencias={ocorrenciasMapa}
+                />
                 <p className="text-xs text-muted-foreground mt-2">
                   {isViagemRastreavel(form.status)
                     ? "Atualização automática enquanto o motorista envia GPS pelo app."
@@ -289,7 +343,11 @@ function Page() {
               <CardTitle className="text-base">Histórico de localização</CardTitle>
             </CardHeader>
             <CardContent>
-              <ViagemLocalizacoesPanel localizacoes={localizacoes} />
+              <ViagemLocalizacoesPanel
+                localizacoes={localizacoes}
+                onSelectPoint={focarLocalizacaoNoMapa}
+                selectedPointId={selectedLocId}
+              />
             </CardContent>
           </Card>
         </TabsContent>

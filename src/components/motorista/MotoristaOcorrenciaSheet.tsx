@@ -18,17 +18,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Viagem, TipoViagemOcorrencia, GravidadeOcorrencia } from "@/types";
+import type { TipoViagemOcorrencia, GravidadeOcorrencia } from "@/types";
 import { GRAVIDADE_OCORRENCIA, TIPOS_VIAGEM_OCORRENCIA } from "@/types";
-import { AlertTriangle, MapPin } from "lucide-react";
+import { requestMotoristaLocationOnce } from "@/lib/motorista-geolocation";
+import { AlertTriangle, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export type OcorrenciaFormData = {
   tipo: TipoViagemOcorrencia;
   gravidade: GravidadeOcorrencia;
   titulo: string;
   descricao: string;
-  latitude?: number;
-  longitude?: number;
+  latitude: number;
+  longitude: number;
 };
 
 type Props = {
@@ -39,9 +41,9 @@ type Props = {
 };
 
 export function MotoristaOcorrenciaSheet({ open, onOpenChange, onSubmit, loading }: Props) {
-  const [form, setForm] = useState<OcorrenciaFormData>({
-    tipo: "outro",
-    gravidade: "media",
+  const [form, setForm] = useState({
+    tipo: "outro" as TipoViagemOcorrencia,
+    gravidade: "media" as GravidadeOcorrencia,
     titulo: "",
     descricao: "",
   });
@@ -56,35 +58,32 @@ export function MotoristaOcorrenciaSheet({ open, onOpenChange, onSubmit, loading
     onOpenChange(next);
   };
 
-  const capturarLocal = () => {
-    if (!navigator.geolocation) return;
-    setCapturandoGps(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setForm((f) => ({
-          ...f,
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-        }));
-        setCapturandoGps(false);
-      },
-      () => setCapturandoGps(false),
-      { enableHighAccuracy: true, timeout: 10_000 },
-    );
-  };
-
   const enviar = () => {
     void (async () => {
-      await onSubmit({
-        ...form,
-        titulo: form.titulo.trim(),
-        descricao: form.descricao.trim(),
-      });
-      reset();
+      setCapturandoGps(true);
+      try {
+        const pos = await requestMotoristaLocationOnce();
+        if (!pos) {
+          toast.error("Não foi possível obter a localização. Verifique o GPS e tente novamente.");
+          return;
+        }
+
+        await onSubmit({
+          ...form,
+          titulo: form.titulo.trim(),
+          descricao: form.descricao.trim(),
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        });
+        reset();
+      } finally {
+        setCapturandoGps(false);
+      }
     })();
   };
 
   const valido = form.titulo.trim().length >= 3 && form.descricao.trim().length >= 10;
+  const busy = loading || capturandoGps;
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
@@ -95,8 +94,8 @@ export function MotoristaOcorrenciaSheet({ open, onOpenChange, onSubmit, loading
             Registrar ocorrência
           </SheetTitle>
           <SheetDescription>
-            Descreva o problema. A transportadora será notificada e a viagem pode ficar marcada
-            como &quot;com ocorrência&quot;.
+            Descreva o problema. A transportadora será notificada e a localização será registrada
+            automaticamente.
           </SheetDescription>
         </SheetHeader>
 
@@ -161,28 +160,22 @@ export function MotoristaOcorrenciaSheet({ open, onOpenChange, onSubmit, loading
             />
             <p className="text-xs text-muted-foreground">Mínimo 10 caracteres na descrição.</p>
           </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={capturarLocal}
-            disabled={capturandoGps}
-          >
-            <MapPin className="h-4 w-4 mr-2" />
-            {capturandoGps
-              ? "Obtendo localização…"
-              : form.latitude != null
-                ? `Local: ${form.latitude.toFixed(4)}, ${form.longitude?.toFixed(4)}`
-                : "Anexar minha localização"}
-          </Button>
         </div>
 
         <SheetFooter className="flex-col gap-2 sm:flex-col">
-          <Button className="w-full" size="lg" onClick={enviar} disabled={loading || !valido}>
-            {loading ? "Salvando…" : "Registrar ocorrência"}
+          <Button className="w-full" size="lg" onClick={enviar} disabled={busy || !valido}>
+            {capturandoGps ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Obtendo localização…
+              </>
+            ) : loading ? (
+              "Salvando…"
+            ) : (
+              "Registrar ocorrência"
+            )}
           </Button>
-          <Button variant="outline" className="w-full" onClick={() => handleOpenChange(false)} disabled={loading}>
+          <Button variant="outline" className="w-full" onClick={() => handleOpenChange(false)} disabled={busy}>
             Cancelar
           </Button>
         </SheetFooter>

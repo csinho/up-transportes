@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { ViagemLocalizacao } from "@/types";
 import { cn } from "@/lib/utils";
+import { formatPrecisaoMetros, formatVelocidadeKmh } from "@/lib/viagem-gps-metrics";
 
 type Props = {
   localizacoes: ViagemLocalizacao[];
@@ -52,13 +53,13 @@ export function GpsStatusPanel({ localizacoes, rastreavel, className }: Props) {
                   <Gauge className="h-3 w-3" /> Velocidade
                 </p>
                 <p className="text-lg font-bold font-display mt-1">
-                  {ultima.velocidade_kmh != null ? `${ultima.velocidade_kmh} km/h` : "—"}
+                  {formatVelocidadeKmh(ultima.velocidade_kmh)}
                 </p>
               </div>
               <div className="rounded-lg border p-3">
                 <p className="text-xs text-muted-foreground">Precisão</p>
                 <p className="text-lg font-bold font-display mt-1">
-                  {ultima.precisao_metros != null ? `${ultima.precisao_metros.toFixed(0)} m` : "—"}
+                  {formatPrecisaoMetros(ultima.precisao_metros)}
                 </p>
               </div>
             </div>

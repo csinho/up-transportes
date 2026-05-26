@@ -47,6 +47,7 @@ const STATUS_ATIVOS = [
   "em_carregamento",
   "em_transito",
   "parada",
+  "aguardando_descarga",
   "em_descarga",
   "com_ocorrencia",
 ] as const;
